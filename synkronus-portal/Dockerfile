@@ -23,6 +23,7 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy custom nginx configuration for SPA routing
+# Backend API: http://demo.synkronus.cloud (remote demo server)
 RUN echo 'server { \
     listen 0.0.0.0:80; \
     listen [::]:80; \
@@ -32,17 +33,26 @@ RUN echo 'server { \
     location / { \
         try_files $uri $uri/ /index.html; \
     } \
-    # Proxy API requests to backend \
+    # Proxy API requests to demo server (demo.synkronus.cloud) \
+    # Strip /api prefix since demo server uses routes without /api prefix \
     location /api { \
         rewrite ^/api(.*)$ $1 break; \
         proxy_pass http://demo.synkronus.cloud; \
         proxy_http_version 1.1; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "upgrade"; \
-        proxy_set_header Host $host; \
+        proxy_set_header Host demo.synkronus.cloud; \
         proxy_set_header X-Real-IP $remote_addr; \
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
         proxy_set_header X-Forwarded-Proto $scheme; \
+        proxy_set_header X-Forwarded-Host $host; \
+        # Explicitly pass Authorization header for authentication \
+        proxy_set_header Authorization $http_authorization; \
+        proxy_pass_request_headers on; \
+        proxy_connect_timeout 60s; \
+        proxy_send_timeout 60s; \
+        proxy_read_timeout 60s; \
+        proxy_buffering off; \
         client_max_body_size 100M; \
     } \
 }' > /etc/nginx/conf.d/default.conf

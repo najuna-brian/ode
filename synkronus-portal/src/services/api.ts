@@ -6,8 +6,10 @@ const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL
   }
-  // Use proxy in development, direct URL in production
-  return import.meta.env.DEV ? '/api' : 'http://localhost:8080'
+  // Use /api proxy in both development and production
+  // In development: Vite dev server proxies /api to backend
+  // In production: Nginx proxies /api to http://demo.synkronus.cloud
+  return '/api'
 }
 
 const API_BASE_URL = getApiBaseUrl()
@@ -114,7 +116,8 @@ export const api = {
 
   // User management endpoints
   async createUser(data: { username: string; password: string; role: string }): Promise<{ username: string; role: string; createdAt: string }> {
-    return request<{ username: string; role: string; createdAt: string }>('/users/create', {
+    // Use /users (not /users/create) to match CLI and demo server
+    return request<{ username: string; role: string; createdAt: string }>('/users', {
       method: 'POST',
       body: JSON.stringify(data),
     })

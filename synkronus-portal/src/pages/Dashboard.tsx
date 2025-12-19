@@ -92,6 +92,17 @@ export function Dashboard() {
   
   // Form states
   const [createUserForm, setCreateUserForm] = useState({ username: '', password: '', role: 'read-only' })
+  
+  // Clear form when modal opens/closes
+  const handleOpenCreateUserModal = () => {
+    setCreateUserForm({ username: '', password: '', role: 'read-only' })
+    setShowCreateUserModal(true)
+  }
+  
+  const handleCloseCreateUserModal = () => {
+    setCreateUserForm({ username: '', password: '', role: 'read-only' })
+    setShowCreateUserModal(false)
+  }
   const [resetPasswordForm, setResetPasswordForm] = useState({ username: '', newPassword: '' })
   const [changePasswordForm, setChangePasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [userSearchQuery, setUserSearchQuery] = useState('')
@@ -230,7 +241,7 @@ export function Dashboard() {
     try {
       const [info, healthResponse] = await Promise.all([
         api.get<SystemInfo>('/version').catch(() => null),
-        fetch(`${import.meta.env.DEV ? '/api' : 'http://localhost:8080'}/health`).catch(() => null)
+        fetch(`${import.meta.env.VITE_API_URL || '/api'}/health`).catch(() => null)
       ])
       if (info) setSystemInfo(info)
       
@@ -279,7 +290,8 @@ export function Dashboard() {
     setError(null)
     setSuccess(null)
     
-    if (tab === 'app-bundles' && appBundles.length === 0) {
+    if (tab === 'app-bundles') {
+      // Always refresh app bundles to get latest activated version
       loadAppBundles()
     } else if (tab === 'users' && users.length === 0) {
       loadUsers()
@@ -355,7 +367,7 @@ export function Dashboard() {
         xhr.addEventListener('error', () => reject(new Error('Network error: Upload failed')))
         xhr.addEventListener('abort', () => reject(new Error('Upload was cancelled')))
 
-        const apiBaseUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:8080')
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '/api'
         const uploadUrl = `${apiBaseUrl}/app-bundle/push`
         xhr.open('POST', uploadUrl)
         if (token) {
@@ -400,7 +412,7 @@ export function Dashboard() {
     setError(null)
     setSuccess(null)
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:8080')
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '/api'
       const token = localStorage.getItem('token')
       
       const response = await fetch(`${apiBaseUrl}/dataexport/parquet`, {
@@ -478,6 +490,7 @@ export function Dashboard() {
     try {
       await api.createUser(createUserForm)
       setSuccess('User created successfully!')
+      // Clear form immediately
       setCreateUserForm({ username: '', password: '', role: 'read-only' })
       setShowCreateUserModal(false)
       await loadUsers()
@@ -517,6 +530,7 @@ export function Dashboard() {
     try {
       await api.resetPassword(resetPasswordForm)
       setSuccess(`Password reset successfully for ${resetPasswordForm.username}!`)
+      // Clear form immediately
       setResetPasswordForm({ username: '', newPassword: '' })
       setShowResetPasswordModal(false)
     } catch (err) {
@@ -524,6 +538,11 @@ export function Dashboard() {
     } finally {
       setLoading(false)
     }
+  }
+  
+  const handleCloseResetPasswordModal = () => {
+    setResetPasswordForm({ username: '', newPassword: '' })
+    setShowResetPasswordModal(false)
   }
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -545,6 +564,7 @@ export function Dashboard() {
         newPassword: changePasswordForm.newPassword,
       })
       setSuccess('Password changed successfully!')
+      // Clear form immediately
       setChangePasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setShowChangePasswordModal(false)
     } catch (err) {
@@ -552,6 +572,16 @@ export function Dashboard() {
     } finally {
       setLoading(false)
     }
+  }
+  
+  const handleCloseChangePasswordModal = () => {
+    setChangePasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    setShowChangePasswordModal(false)
+  }
+  
+  const handleOpenChangePasswordModal = () => {
+    setChangePasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    setShowChangePasswordModal(true)
   }
 
   return (
@@ -818,7 +848,7 @@ export function Dashboard() {
                   <p className="section-subtitle">Manage system users and permissions</p>
                 </div>
                 <div className="section-actions">
-                  <button onClick={() => setShowCreateUserModal(true)} disabled={loading} className="create-button">
+                  <button onClick={handleOpenCreateUserModal} disabled={loading} className="create-button">
                     <span>➕</span>
                     <span>Create User</span>
                   </button>
@@ -958,7 +988,7 @@ export function Dashboard() {
                   <h2>My Account</h2>
                   <p className="section-subtitle">Manage your account settings</p>
                 </div>
-                <button onClick={() => setShowChangePasswordModal(true)} className="change-password-button">
+                <button onClick={handleOpenChangePasswordModal} className="change-password-button">
                   <span>🔑</span>
                   <span>Change Password</span>
                 </button>
@@ -1334,7 +1364,7 @@ export function Dashboard() {
                         <div className="info-content">
                           <h3>API Endpoint</h3>
                           <p style={{ fontSize: '13px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                            {import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:8080')}
+                            {import.meta.env.VITE_API_URL || '/api'}
                           </p>
                         </div>
                       </div>
@@ -1362,31 +1392,35 @@ export function Dashboard() {
 
       {/* Create User Modal */}
       {showCreateUserModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateUserModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseCreateUserModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Create New User</h2>
-              <button className="modal-close" onClick={() => setShowCreateUserModal(false)}>×</button>
+              <button className="modal-close" onClick={handleCloseCreateUserModal}>×</button>
             </div>
-            <form onSubmit={handleCreateUser} className="modal-form">
+            <form onSubmit={handleCreateUser} className="modal-form" autoComplete="off">
               <div className="form-group">
-                <label htmlFor="username">Username</label>
+                <label htmlFor="create-username">Username</label>
                 <input
                   type="text"
-                  id="username"
+                  id="create-username"
+                  name="create-username"
                   value={createUserForm.username}
                   onChange={(e) => setCreateUserForm({ ...createUserForm, username: e.target.value })}
+                  autoComplete="off"
                   required
                   disabled={loading}
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="password">Password</label>
+                <label htmlFor="create-password">Password</label>
                 <input
                   type="password"
-                  id="password"
+                  id="create-password"
+                  name="create-password"
                   value={createUserForm.password}
                   onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })}
+                  autoComplete="new-password"
                   required
                   disabled={loading}
                 />
@@ -1406,7 +1440,7 @@ export function Dashboard() {
                 </select>
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => setShowCreateUserModal(false)} disabled={loading}>
+                <button type="button" onClick={handleCloseCreateUserModal} disabled={loading}>
                   Cancel
                 </button>
                 <button type="submit" disabled={loading}>
@@ -1426,31 +1460,35 @@ export function Dashboard() {
               <h2>Reset Password</h2>
               <button className="modal-close" onClick={() => setShowResetPasswordModal(false)}>×</button>
             </div>
-            <form onSubmit={handleResetPassword} className="modal-form">
+            <form onSubmit={handleResetPassword} className="modal-form" autoComplete="off">
               <div className="form-group">
                 <label htmlFor="reset-username">Username</label>
                 <input
                   type="text"
                   id="reset-username"
+                  name="reset-username"
                   value={resetPasswordForm.username}
                   onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, username: e.target.value })}
+                  autoComplete="off"
                   required
                   disabled={loading}
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="new-password">New Password</label>
+                <label htmlFor="reset-new-password">New Password</label>
                 <input
                   type="password"
-                  id="new-password"
+                  id="reset-new-password"
+                  name="reset-new-password"
                   value={resetPasswordForm.newPassword}
                   onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, newPassword: e.target.value })}
+                  autoComplete="new-password"
                   required
                   disabled={loading}
                 />
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => setShowResetPasswordModal(false)} disabled={loading}>
+                <button type="button" onClick={handleCloseResetPasswordModal} disabled={loading}>
                   Cancel
                 </button>
                 <button type="submit" disabled={loading}>
@@ -1464,48 +1502,54 @@ export function Dashboard() {
 
       {/* Change Password Modal */}
       {showChangePasswordModal && (
-        <div className="modal-overlay" onClick={() => setShowChangePasswordModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseChangePasswordModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Change Password</h2>
-              <button className="modal-close" onClick={() => setShowChangePasswordModal(false)}>×</button>
+              <button className="modal-close" onClick={handleCloseChangePasswordModal}>×</button>
             </div>
-            <form onSubmit={handleChangePassword} className="modal-form">
+            <form onSubmit={handleChangePassword} className="modal-form" autoComplete="off">
               <div className="form-group">
-                <label htmlFor="current-password">Current Password</label>
+                <label htmlFor="change-current-password">Current Password</label>
                 <input
                   type="password"
-                  id="current-password"
+                  id="change-current-password"
+                  name="change-current-password"
                   value={changePasswordForm.currentPassword}
                   onChange={(e) => setChangePasswordForm({ ...changePasswordForm, currentPassword: e.target.value })}
+                  autoComplete="current-password"
                   required
                   disabled={loading}
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="new-password-change">New Password</label>
+                <label htmlFor="change-new-password">New Password</label>
                 <input
                   type="password"
-                  id="new-password-change"
+                  id="change-new-password"
+                  name="change-new-password"
                   value={changePasswordForm.newPassword}
                   onChange={(e) => setChangePasswordForm({ ...changePasswordForm, newPassword: e.target.value })}
+                  autoComplete="new-password"
                   required
                   disabled={loading}
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="confirm-password">Confirm New Password</label>
+                <label htmlFor="change-confirm-password">Confirm New Password</label>
                 <input
                   type="password"
-                  id="confirm-password"
+                  id="change-confirm-password"
+                  name="change-confirm-password"
                   value={changePasswordForm.confirmPassword}
                   onChange={(e) => setChangePasswordForm({ ...changePasswordForm, confirmPassword: e.target.value })}
+                  autoComplete="new-password"
                   required
                   disabled={loading}
                 />
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => setShowChangePasswordModal(false)} disabled={loading}>
+                <button type="button" onClick={handleCloseChangePasswordModal} disabled={loading}>
                   Cancel
                 </button>
                 <button type="submit" disabled={loading}>
