@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Alert,
   CircularProgress,
   Grid,
   Divider,
@@ -19,6 +18,7 @@ import {
   Delete as DeleteIcon,
   MyLocation as MyLocationIcon,
 } from '@mui/icons-material';
+import QuestionShell from './QuestionShell';
 // GPS is now captured automatically by the native app for all forms.
 // This renderer is kept only for backward-compatibility with existing
 // form schemas that still reference the "gps" format. It no longer
@@ -92,36 +92,33 @@ const GPSQuestionRenderer: React.FC<GPSQuestionRendererProps> = (props) => {
   const isDisabled = !enabled || isCapturing;
 
   return (
-    <Box sx={{ mb: 2 }}>
-      {/* Field Label */}
-      <Typography variant="h6" sx={{ mb: 1, fontWeight: 500 }}>
-        {schema.title || 'GPS Location'}
-      </Typography>
-
-      {/* Field Description */}
-      {schema.description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {schema.description}
-        </Typography>
+    <QuestionShell
+      title={schema.title || 'GPS Location'}
+      description={schema.description}
+      required={Boolean(
+        (props.uischema as any)?.options?.required ?? (schema as any)?.options?.required,
       )}
-
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Validation Errors */}
-      {hasValidationErrors && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {Array.isArray(errors) ? errors.map((error: any) => error.message).join(', ') : errors}
-        </Alert>
-      )}
-
-      {/* Location Display or Capture Button */}
+      error={
+        error ||
+        (hasValidationErrors
+          ? Array.isArray(errors)
+            ? errors.map((error: any) => error.message || String(error)).join(', ')
+            : errors
+          : null)
+      }
+      helperText="GPS is captured automatically; use this only if the form requires manual capture."
+      metadata={
+        process.env.NODE_ENV === 'development' ? (
+          <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              Debug - Path: {path} | Data: {JSON.stringify(data)}
+            </Typography>
+          </Box>
+        ) : undefined
+      }
+    >
       {locationData ? (
-        <Card variant="outlined" sx={{ mb: 2 }}>
+        <Card variant="outlined">
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <LocationIcon color="primary" sx={{ mr: 1 }} />
@@ -239,16 +236,7 @@ const GPSQuestionRenderer: React.FC<GPSQuestionRendererProps> = (props) => {
           </Typography>
         </Box>
       )}
-
-      {/* Debug Information (only in development) */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            Debug - Path: {path} | Data: {JSON.stringify(data)}
-          </Typography>
-        </Box>
-      )}
-    </Box>
+    </QuestionShell>
   );
 };
 

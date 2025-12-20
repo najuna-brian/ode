@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Button, Typography, Box, Alert, CircularProgress, Paper, IconButton } from '@mui/material';
+import { Button, Typography, Box, CircularProgress, Paper, IconButton } from '@mui/material';
 import {
   Draw as SignatureIcon,
   Delete as DeleteIcon,
@@ -9,6 +9,7 @@ import { withJsonFormsControlProps } from '@jsonforms/react';
 import { ControlProps, rankWith, formatIs } from '@jsonforms/core';
 import FormulusClient from './FormulusInterface';
 import { SignatureResult } from './FormulusInterfaceDefinition';
+import QuestionShell from './QuestionShell';
 
 // Tester function - determines when this renderer should be used
 export const signatureQuestionTester = rankWith(
@@ -227,39 +228,28 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
   }
 
   const hasData = data && typeof data === 'object' && data.type === 'signature';
-  const hasError = errors && (Array.isArray(errors) ? errors.length > 0 : errors.length > 0);
+  const validationError = errors && (Array.isArray(errors) ? errors.join(', ') : errors);
 
   return (
-    <Box sx={{ mb: 2 }}>
-      {/* Title and Description */}
-      {schema.title && (
-        <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
-          {schema.title}
-        </Typography>
-      )}
-      {schema.description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {schema.description}
-        </Typography>
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Validation Errors */}
-      {hasError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {Array.isArray(errors) ? errors.join(', ') : errors}
-        </Alert>
-      )}
-
+    <QuestionShell
+      title={schema.title}
+      description={schema.description}
+      required={Boolean((uischema as any)?.options?.required ?? (schema as any)?.options?.required)}
+      error={error || validationError}
+      helperText="Capture a clear signature. You can use native capture or draw on canvas."
+      metadata={
+        process.env.NODE_ENV === 'development' ? (
+          <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+              Debug: fieldId="{fieldId}", path="{path}", format="signature"
+            </Typography>
+          </Box>
+        ) : undefined
+      }
+    >
       {/* Canvas Signature Pad */}
       {showCanvas && (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper sx={{ p: 2 }}>
           <Typography variant="subtitle2" sx={{ mb: 2 }}>
             Draw your signature below:
           </Typography>
@@ -325,7 +315,7 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
 
       {/* Action Buttons */}
       {!showCanvas && (
-        <Box sx={{ mb: 2 }}>
+        <Box>
           <Button
             variant="contained"
             startIcon={isCapturing ? <CircularProgress size={20} /> : <SignatureIcon />}
@@ -389,16 +379,7 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
           </Box>
         </Paper>
       )}
-
-      {/* Development Debug Info */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ mt: 2, p: 1, bgcolor: 'info.light', borderRadius: 1 }}>
-          <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
-            Debug: fieldId="{fieldId}", path="{path}", format="signature"
-          </Typography>
-        </Box>
-      )}
-    </Box>
+    </QuestionShell>
   );
 };
 

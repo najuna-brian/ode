@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { rankWith, ControlProps, formatIs } from '@jsonforms/core';
 import { withJsonFormsControlProps } from '@jsonforms/react';
-import {
-  Button,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Alert,
-  Grid,
-  Divider,
-} from '@mui/material';
+import { Button, Typography, Box, Card, CardContent, Chip, Grid, Divider } from '@mui/material';
 import {
   Videocam as VideocamIcon,
   PlayArrow as PlayIcon,
@@ -21,6 +11,7 @@ import {
   Delete as DeleteIcon,
   VideoFile as VideoFileIcon,
 } from '@mui/icons-material';
+import QuestionShell from './QuestionShell';
 // Note: The shared Formulus interface v1.1.0 no longer exposes a
 // requestVideo() API. This renderer therefore does not actively
 // trigger native video recording anymore. It can still display
@@ -129,36 +120,34 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
   const isDisabled = !enabled;
 
   return (
-    <Box sx={{ mb: 2 }}>
-      {/* Field Label */}
-      <Typography variant="h6" sx={{ mb: 1, fontWeight: 500 }}>
-        {schema.title || 'Video Recording'}
-      </Typography>
-
-      {/* Field Description */}
-      {schema.description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {schema.description}
-        </Typography>
+    <QuestionShell
+      title={schema.title || 'Video Recording'}
+      description={schema.description}
+      required={Boolean(
+        (props.uischema as any)?.options?.required ?? (schema as any)?.options?.required,
       )}
-
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Validation Errors */}
-      {hasValidationErrors && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {Array.isArray(errors) ? errors.map((error: any) => error.message).join(', ') : errors}
-        </Alert>
-      )}
-
+      error={
+        error ||
+        (hasValidationErrors
+          ? Array.isArray(errors)
+            ? errors.map((error: any) => error.message || String(error)).join(', ')
+            : errors
+          : null)
+      }
+      helperText="Capture a video if required. Current app version may not support recording."
+      metadata={
+        process.env.NODE_ENV === 'development' ? (
+          <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              Debug - Path: {path} | Data: {JSON.stringify(data)}
+            </Typography>
+          </Box>
+        ) : undefined
+      }
+    >
       {/* Video Display or Record Button */}
       {videoData ? (
-        <Card variant="outlined" sx={{ mb: 2 }}>
+        <Card variant="outlined">
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <VideoFileIcon color="primary" sx={{ mr: 1 }} />
@@ -316,16 +305,7 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
           </Typography>
         </Box>
       )}
-
-      {/* Debug Information (only in development) */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            Debug - Path: {path} | Data: {JSON.stringify(data)}
-          </Typography>
-        </Box>
-      )}
-    </Box>
+    </QuestionShell>
   );
 };
 

@@ -25,6 +25,7 @@ import FileQuestionRenderer, { fileQuestionTester } from './FileQuestionRenderer
 import AudioQuestionRenderer, { audioQuestionTester } from './AudioQuestionRenderer';
 import GPSQuestionRenderer, { gpsQuestionTester } from './GPSQuestionRenderer';
 import VideoQuestionRenderer, { videoQuestionTester } from './VideoQuestionRenderer';
+import { shellMaterialRenderers } from './material-wrappers';
 
 import ErrorBoundary from './ErrorBoundary';
 import { draftService } from './DraftService';
@@ -671,7 +672,11 @@ function App() {
                     schema={schema}
                     uischema={uischema}
                     data={data}
-                    renderers={[...materialRenderers, ...customRenderers]}
+                    renderers={[
+                      ...shellMaterialRenderers,
+                      ...materialRenderers,
+                      ...customRenderers,
+                    ]}
                     cells={materialCells}
                     onChange={handleDataChange}
                     validationMode="ValidateAndShow"

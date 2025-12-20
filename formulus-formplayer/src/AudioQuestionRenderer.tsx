@@ -1,16 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { withJsonFormsControlProps } from '@jsonforms/react';
 import { ControlProps, rankWith, formatIs } from '@jsonforms/core';
-import {
-  Box,
-  Button,
-  Typography,
-  Paper,
-  IconButton,
-  LinearProgress,
-  Alert,
-  Chip,
-} from '@mui/material';
+import { Box, Button, Typography, Paper, IconButton, LinearProgress, Chip } from '@mui/material';
 import {
   Mic as MicIcon,
   Stop as StopIcon,
@@ -21,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import FormulusClient from './FormulusInterface';
 import { AudioResult } from './FormulusInterfaceDefinition';
+import QuestionShell from './QuestionShell';
 
 interface AudioQuestionRendererProps extends ControlProps {
   data: any;
@@ -210,34 +202,19 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const validationError =
+    errors && Array.isArray(errors) && errors.length > 0
+      ? errors.map((error: any) => error.message || String(error)).join(', ')
+      : null;
+
   return (
-    <Box sx={{ mb: 2 }}>
-      {/* Label */}
-      {schema.title && (
-        <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
-          {schema.title}
-          {schema.description && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {schema.description}
-            </Typography>
-          )}
-        </Typography>
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Validation Errors */}
-      {errors && Array.isArray(errors) && errors.length > 0 && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errors.map((error: any) => error.message).join(', ')}
-        </Alert>
-      )}
-
+    <QuestionShell
+      title={schema.title}
+      description={schema.description}
+      required={Boolean((uischema as any)?.options?.required ?? (schema as any)?.options?.required)}
+      error={error || validationError}
+      helperText="Record clear audio. You can re-record or delete as needed."
+    >
       <Paper
         variant="outlined"
         sx={{
@@ -401,7 +378,7 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
           </Box>
         )}
       </Paper>
-    </Box>
+    </QuestionShell>
   );
 };
 

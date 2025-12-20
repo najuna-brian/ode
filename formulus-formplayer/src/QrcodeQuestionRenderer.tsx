@@ -1,19 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { withJsonFormsControlProps } from '@jsonforms/react';
 import { ControlProps, rankWith, schemaTypeIs, and, schemaMatches } from '@jsonforms/core';
-import {
-  Button,
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  IconButton,
-  Alert,
-  TextField,
-} from '@mui/material';
+import { Button, Box, Typography, Card, CardContent, IconButton, TextField } from '@mui/material';
 import { QrCodeScanner, Delete, Refresh } from '@mui/icons-material';
 import FormulusClient from './FormulusInterface';
 import { QrcodeResult } from './FormulusInterfaceDefinition';
+import QuestionShell from './QuestionShell';
 
 // Tester function to identify QR code question types
 export const qrcodeQuestionTester = rankWith(
@@ -149,39 +141,45 @@ const QrcodeQuestionRenderer: React.FC<QrcodeQuestionProps> = ({
   // Get display label from schema or uischema
   const label = (uischema as any)?.label || schema.title || 'QR Code';
   const description = schema.description;
-  const isRequired = schema.required || false;
+  const isRequired = Boolean(
+    (uischema as any)?.options?.required ?? (schema as any)?.options?.required ?? false,
+  );
+
+  const validationError = errors && errors.length > 0 ? String(errors[0]) : null;
 
   return (
-    <Box sx={{ mb: 2, width: '100%' }}>
-      {/* Label and description */}
-      <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium' }}>
-        {label}
-        {isRequired && <span style={{ color: 'red' }}> *</span>}
-      </Typography>
-
-      {description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {description}
-        </Typography>
-      )}
-
-      {/* Error display - full width, pushes content down */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2, width: '100%', display: 'block' }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Form validation errors */}
-      {errors && errors.length > 0 && (
-        <Alert severity="error" sx={{ mb: 2, width: '100%' }}>
-          {String(errors[0])}
-        </Alert>
-      )}
-
-      {/* QR code value display or scanner button */}
+    <QuestionShell
+      title={label}
+      description={description}
+      required={isRequired}
+      error={error || validationError}
+      helperText="Scan the code or enter it manually if needed."
+      metadata={
+        process.env.NODE_ENV === 'development' ? (
+          <Box sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+            <Typography variant="caption" component="div">
+              Debug Info:
+            </Typography>
+            <Typography variant="caption" component="pre" sx={{ fontSize: '0.7rem' }}>
+              {JSON.stringify(
+                {
+                  fieldId,
+                  path,
+                  currentQrcodeValue,
+                  hasQrcodeValue: !!currentQrcodeValue,
+                  isLoading,
+                  error,
+                },
+                null,
+                2,
+              )}
+            </Typography>
+          </Box>
+        ) : undefined
+      }
+    >
       {currentQrcodeValue ? (
-        <Card sx={{ mb: 2 }}>
+        <Card>
           <CardContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="body2" color="text.secondary">
@@ -263,30 +261,7 @@ const QrcodeQuestionRenderer: React.FC<QrcodeQuestionProps> = ({
           </Box>
         </Box>
       )}
-
-      {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ mt: 2, p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-          <Typography variant="caption" component="div">
-            Debug Info:
-          </Typography>
-          <Typography variant="caption" component="pre" sx={{ fontSize: '0.7rem' }}>
-            {JSON.stringify(
-              {
-                fieldId,
-                path,
-                currentQrcodeValue,
-                hasQrcodeValue: !!currentQrcodeValue,
-                isLoading,
-                error,
-              },
-              null,
-              2,
-            )}
-          </Typography>
-        </Box>
-      )}
-    </Box>
+    </QuestionShell>
   );
 };
 

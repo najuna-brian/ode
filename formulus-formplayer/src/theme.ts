@@ -142,6 +142,14 @@ const themeOptions: ThemeOptions = {
     borderRadius: parsePx(tokens.border.radius.lg), // 12px - Material Design 3 default
   },
   components: {
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          width: '100%',
+          marginBottom: parsePx(tokens.spacing[4]),
+        },
+      },
+    },
     // Button styling - Material Design 3 with ODE tokens
     MuiButton: {
       styleOverrides: {
@@ -199,6 +207,8 @@ const themeOptions: ThemeOptions = {
     MuiTextField: {
       styleOverrides: {
         root: {
+          width: '100%',
+          marginBottom: parsePx(tokens.spacing[4]),
           '& .MuiOutlinedInput-root': {
             borderRadius: parsePx(tokens.border.radius.sm), // 4px - Material Design 3 text field
             backgroundColor: 'transparent',
