@@ -29,6 +29,39 @@ export const groupAsSwipeLayoutTester: RankedTester = rankWith(
   isGroupElement,
 );
 
+type LayoutElement = any;
+
+const isControlElement = (el: any) => el && typeof el === 'object' && el.type === 'Control';
+
+const extractScopes = (elements: LayoutElement[]): string[] => {
+  const scopes: string[] = [];
+  elements.forEach((el) => {
+    if (isControlElement(el) && el.scope) {
+      scopes.push(el.scope);
+    }
+    if (Array.isArray(el?.elements)) {
+      scopes.push(...extractScopes(el.elements));
+    }
+  });
+  return scopes;
+};
+
+const isValueEmpty = (value: any) => {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string') return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') return Object.keys(value).length === 0;
+  return false;
+};
+
+const getRequiredKeys = (schema: any): Set<string> => {
+  const req = schema?.required;
+  if (Array.isArray(req)) {
+    return new Set(req.map((key: string) => `#/properties/${key}`));
+  }
+  return new Set();
+};
+
 const SwipeLayoutRenderer = ({
   schema,
   uischema,
@@ -42,6 +75,7 @@ const SwipeLayoutRenderer = ({
   onPageChange,
 }: SwipeLayoutProps) => {
   const [isNavigating, setIsNavigating] = useState(false);
+  const [navError, setNavError] = useState<string | null>(null);
 
   // Handle both SwipeLayout and Group elements
   // Use type assertion to avoid TypeScript errors
@@ -61,11 +95,8 @@ const SwipeLayoutRenderer = ({
   const navigateToPage = useCallback(
     (newPage: number) => {
       if (isNavigating) return;
-
       setIsNavigating(true);
       onPageChange(newPage);
-
-      // Add a small delay before allowing next navigation
       setTimeout(() => {
         setIsNavigating(false);
       }, 100);
@@ -73,9 +104,37 @@ const SwipeLayoutRenderer = ({
     [isNavigating, onPageChange],
   );
 
+  const requiredSet = useMemo(() => getRequiredKeys(schema), [schema]);
+  const pageHasMissingRequired = useMemo(() => {
+    const currentLayout = layouts[currentPage];
+    if (!currentLayout) return false;
+    const scopes = extractScopes(currentLayout.elements || []);
+    for (const scope of scopes) {
+      if (requiredSet.has(scope)) {
+        const key = scope.replace('#/properties/', '');
+        const value = (data as any)?.[key];
+        if (isValueEmpty(value)) return true;
+      }
+    }
+    return false;
+  }, [currentPage, data, layouts, requiredSet]);
+
+  const guardedNavigate = useCallback(
+    (targetPage: number) => {
+      // Soft hint only; do not block navigation
+      if (targetPage !== currentPage) {
+        setNavError(
+          pageHasMissingRequired ? 'Required fields on this page are still empty.' : null,
+        );
+      }
+      navigateToPage(targetPage);
+    },
+    [currentPage, navigateToPage, pageHasMissingRequired],
+  );
+
   const handlers = useSwipeable({
-    onSwipedLeft: () => navigateToPage(Math.min(currentPage + 1, layouts.length - 1)),
-    onSwipedRight: () => navigateToPage(Math.max(currentPage - 1, 0)),
+    onSwipedLeft: () => guardedNavigate(Math.min(currentPage + 1, layouts.length - 1)),
+    onSwipedRight: () => guardedNavigate(Math.max(currentPage - 1, 0)),
   });
 
   // Calculate total screens including Finalize (so progress reaches 100% only on Finalize)
@@ -105,7 +164,7 @@ const SwipeLayoutRenderer = ({
       previousButton={
         currentPage > 0
           ? {
-              onClick: () => navigateToPage(Math.max(currentPage - 1, 0)),
+              onClick: () => guardedNavigate(Math.max(currentPage - 1, 0)),
               disabled: isNavigating,
             }
           : undefined
@@ -113,7 +172,7 @@ const SwipeLayoutRenderer = ({
       nextButton={
         currentPage < layouts.length - 1
           ? {
-              onClick: () => navigateToPage(Math.min(currentPage + 1, layouts.length - 1)),
+              onClick: () => guardedNavigate(Math.min(currentPage + 1, layouts.length - 1)),
               disabled: isNavigating,
             }
           : undefined
@@ -132,6 +191,18 @@ const SwipeLayoutRenderer = ({
             renderers={renderers}
             cells={cells}
           />
+        )}
+        {navError && (
+          <div
+            style={{
+              marginTop: '12px',
+              color: '#c77800',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+            }}
+          >
+            {navError}
+          </div>
         )}
       </div>
     </FormLayout>
