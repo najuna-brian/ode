@@ -20,6 +20,7 @@ import {QRSettingsService} from '../services/QRSettingsService';
 import {MainAppStackParamList} from '../types/NavigationTypes';
 import {colors} from '../theme/colors';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {ToastService} from '../services/ToastService';
 
 type SettingsScreenNavigationProp = StackNavigationProp<
   MainAppStackParamList,
@@ -98,12 +99,18 @@ const SettingsScreen = () => {
   const handleQRResult = async (result: any) => {
     setShowQRScanner(false);
 
+    if (result.status === 'cancelled') {
+      return;
+    }
+
     if (result.status === 'success' && result.data?.value) {
       try {
         const settings = await QRSettingsService.processQRCode(
           result.data.value,
         );
         setServerUrl(settings.serverUrl);
+        setUsername(settings.username);
+        setPassword(settings.password);
 
         if (settings.username && settings.password) {
           await Keychain.setGenericPassword(
@@ -113,14 +120,26 @@ const SettingsScreen = () => {
           try {
             const userInfo = await login(settings.username, settings.password);
             setLoggedInUser(userInfo);
+            ToastService.showShort('Successfully logged in!');
             navigation.navigate('MainApp');
           } catch (error: any) {
             console.error('Auto-login failed:', error);
+            const errorMessage =
+              error?.message ||
+              'Failed to login. Please check your credentials.';
+            ToastService.showLong(`Login failed: ${errorMessage}`);
           }
+        } else {
+          ToastService.showShort('Settings updated successfully');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to process QR code:', error);
+        const errorMessage =
+          error?.message || 'Invalid QR code format. Please try again.';
+        ToastService.showLong(`QR code error: ${errorMessage}`);
       }
+    } else {
+      ToastService.showLong('Failed to scan QR code. Please try again.');
     }
   };
 
