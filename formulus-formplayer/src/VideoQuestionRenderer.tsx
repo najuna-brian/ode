@@ -9,7 +9,6 @@ import {
   Stop as StopIcon,
   Refresh as RefreshIcon,
   Delete as DeleteIcon,
-  VideoFile as VideoFileIcon,
 } from '@mui/icons-material';
 import QuestionShell from './QuestionShell';
 // Note: The shared Formulus interface v1.1.0 no longer exposes a
@@ -150,10 +149,27 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
         <Card variant="outlined">
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <VideoFileIcon color="primary" sx={{ mr: 1 }} />
-              <Typography variant="h6" component="div">
-                Video Recorded
-              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={handleRecordVideo}
+                  disabled={isDisabled}
+                  size="small"
+                >
+                  Re-record
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={handleDeleteVideo}
+                  disabled={isDisabled}
+                  size="small"
+                >
+                  Delete
+                </Button>
+              </Box>
               <Box sx={{ ml: 'auto' }}>
                 <Chip
                   label={videoData.metadata.format.toUpperCase()}
@@ -254,29 +270,6 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
                 </Typography>
               </Grid>
             </Grid>
-
-            {/* Action Buttons */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={handleRecordVideo}
-                disabled={isDisabled}
-                size="small"
-              >
-                Re-record
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={handleDeleteVideo}
-                disabled={isDisabled}
-                size="small"
-              >
-                Delete
-              </Button>
-            </Box>
           </CardContent>
         </Card>
       ) : (

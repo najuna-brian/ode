@@ -121,13 +121,37 @@ const GPSQuestionRenderer: React.FC<GPSQuestionRendererProps> = (props) => {
         <Card variant="outlined">
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={handleCaptureLocation}
+                  disabled={isDisabled}
+                  size="small"
+                >
+                  Re-capture
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={handleDeleteLocation}
+                  disabled={isDisabled}
+                  size="small"
+                >
+                  Delete
+                </Button>
+              </Box>
+              <Box sx={{ ml: 'auto' }}>
+                <Chip label="GPS" color="success" size="small" icon={<MyLocationIcon />} />
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <LocationIcon color="primary" sx={{ mr: 1 }} />
               <Typography variant="h6" component="div">
                 Location Captured
               </Typography>
-              <Box sx={{ ml: 'auto' }}>
-                <Chip label="GPS" color="success" size="small" icon={<MyLocationIcon />} />
-              </Box>
             </Box>
 
             <Grid container spacing={2}>
@@ -183,29 +207,6 @@ const GPSQuestionRenderer: React.FC<GPSQuestionRendererProps> = (props) => {
                 </Typography>
               </Grid>
             </Grid>
-
-            {/* Action Buttons */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={handleCaptureLocation}
-                disabled={isDisabled}
-                size="small"
-              >
-                Re-capture
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={handleDeleteLocation}
-                disabled={isDisabled}
-                size="small"
-              >
-                Delete
-              </Button>
-            </Box>
           </CardContent>
         </Card>
       ) : (

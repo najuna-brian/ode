@@ -274,6 +274,27 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
         ) : (
           // Playback State
           <Box>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, justifyContent: 'center' }}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={handleRecord}
+                disabled={isLoading}
+                size="small"
+              >
+                Re-record
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={handleDelete}
+                size="small"
+              >
+                Delete
+              </Button>
+            </Box>
+
             {/* Audio element (hidden) */}
             <audio ref={audioRef} src={audioData.uri} preload="metadata" />
 
@@ -344,27 +365,6 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
               >
                 <StopIcon />
               </IconButton>
-            </Box>
-
-            {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={handleRecord}
-                disabled={isLoading}
-              >
-                Re-record
-              </Button>
-
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={handleDelete}
-              >
-                Delete
-              </Button>
             </Box>
 
             {/* Development Info */}

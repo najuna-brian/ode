@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Button, Typography, Box, CircularProgress, Paper, IconButton, Chip } from '@mui/material';
+import { Button, Typography, Box, CircularProgress, Paper, Chip } from '@mui/material';
 import {
   AttachFile as FileIcon,
   Delete as DeleteIcon,
@@ -168,64 +168,75 @@ const FileQuestionRenderer: React.FC<ControlProps> = ({
       {/* File Display */}
       {hasData && (
         <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Box sx={{ flex: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                {getFileIcon(data.mimeType)}
-                <Box sx={{ ml: 2, flex: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    {data.filename}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                    <Chip
-                      label={getFileTypeLabel(data.mimeType)}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip label={formatFileSize(data.size)} size="small" variant="outlined" />
-                    {data.metadata.extension && (
-                      <Chip
-                        label={`.${data.metadata.extension.toUpperCase()}`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                </Box>
-              </Box>
-
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                <strong>URI:</strong> {data.uri}
-              </Typography>
-
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                <strong>MIME Type:</strong> {data.mimeType}
-              </Typography>
-
-              {data.metadata.originalPath && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  <strong>Original Path:</strong> {data.metadata.originalPath}
-                </Typography>
-              )}
-
-              {/* Replace File Button */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
                 variant="outlined"
                 startIcon={<FileIcon />}
                 onClick={handleFileSelection}
                 disabled={!enabled || isSelecting}
                 size="small"
-                sx={{ mt: 2 }}
               >
-                Replace File
+                Replace
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={handleDelete}
+                disabled={!enabled}
+                size="small"
+              >
+                Delete
               </Button>
             </Box>
-
-            <IconButton onClick={handleDelete} disabled={!enabled} size="small" sx={{ ml: 1 }}>
-              <DeleteIcon />
-            </IconButton>
           </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            {getFileIcon(data.mimeType)}
+            <Box sx={{ ml: 2, flex: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                {data.filename}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                <Chip
+                  label={getFileTypeLabel(data.mimeType)}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+                <Chip label={formatFileSize(data.size)} size="small" variant="outlined" />
+                {data.metadata.extension && (
+                  <Chip
+                    label={`.${data.metadata.extension.toUpperCase()}`}
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
+              </Box>
+            </Box>
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            <strong>URI:</strong> {data.uri}
+          </Typography>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            <strong>MIME Type:</strong> {data.mimeType}
+          </Typography>
+
+          {data.metadata.originalPath && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              <strong>Original Path:</strong> {data.metadata.originalPath}
+            </Typography>
+          )}
         </Paper>
       )}
     </QuestionShell>

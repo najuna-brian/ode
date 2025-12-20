@@ -210,38 +210,36 @@ const PhotoQuestionRenderer: React.FC<PhotoQuestionProps> = ({
       }
     >
       {currentPhotoData && currentPhotoData.filename && photoUrl ? (
-        <Card sx={{ maxWidth: 400 }}>
-          <CardMedia
-            component="img"
-            height="200"
-            image={photoUrl}
-            alt="Captured photo"
-            sx={{ objectFit: 'cover' }}
-          />
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                File: {currentPhotoData.filename}
-              </Typography>
-              <Box>
-                <IconButton
-                  onClick={handleTakePhoto}
-                  disabled={!enabled || isLoading}
-                  color="primary"
-                  title="Retake photo"
-                >
-                  <Refresh />
-                </IconButton>
-                <IconButton
-                  onClick={handleDeletePhoto}
-                  disabled={!enabled}
-                  color="error"
-                  title="Delete photo"
-                >
-                  <Delete />
-                </IconButton>
-              </Box>
+        <Card sx={{ maxWidth: 420 }}>
+          <CardContent sx={{ pb: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mb: 1 }}>
+              <IconButton
+                onClick={handleTakePhoto}
+                disabled={!enabled || isLoading}
+                color="primary"
+                title="Retake photo"
+              >
+                <Refresh />
+              </IconButton>
+              <IconButton
+                onClick={handleDeletePhoto}
+                disabled={!enabled}
+                color="error"
+                title="Delete photo"
+              >
+                <Delete />
+              </IconButton>
             </Box>
+            <CardMedia
+              component="img"
+              height="220"
+              image={photoUrl}
+              alt="Captured photo"
+              sx={{ objectFit: 'cover', borderRadius: 1 }}
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              File: {currentPhotoData.filename}
+            </Typography>
           </CardContent>
         </Card>
       ) : (
