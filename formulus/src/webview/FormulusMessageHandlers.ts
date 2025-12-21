@@ -261,6 +261,7 @@ import {FormulusMessageHandlers} from './FormulusMessageHandlers.types';
 import {
   FormInitData,
   FormCompletionResult,
+  FormInfo,
 } from './FormulusInterfaceDefinition';
 import {FormService} from '../services/FormService';
 import {Observation} from '../database/models/Observation';
@@ -967,12 +968,46 @@ export function createFormulusMessageHandlers(): FormulusMessageHandlers {
       // TODO: implement run local model logic
       console.log('Run local model handler called', fieldId, modelId, input);
     },
-    onGetAvailableForms: async () => {
-      console.log(
-        'FormulusMessageHandlers: onGetAvailableForms handler invoked.',
-      );
-      // TODO: Implement logic to fetch available forms
-      return Promise.resolve([]); // Example: return empty array
+    onGetAvailableForms: async (): Promise<FormInfo[]> => {
+      try {
+        const formService = await FormService.getInstance();
+        const formSpecs = formService.getFormSpecs();
+
+        return formSpecs.map(spec => {
+          const schema = spec.schema || {};
+          const properties = schema.properties || {};
+
+          const coreFields: string[] = [];
+          const auxiliaryFields: string[] = [];
+
+          // Extract fields from schema properties
+          Object.keys(properties).forEach(fieldName => {
+            const field = properties[fieldName] || {};
+            const isCore =
+              field['x-core'] === true || fieldName.startsWith('core_');
+
+            if (isCore) {
+              coreFields.push(fieldName);
+            } else {
+              auxiliaryFields.push(fieldName);
+            }
+          });
+
+          return {
+            formType: spec.id,
+            name: spec.name,
+            version: spec.schemaVersion,
+            coreFields,
+            auxiliaryFields,
+          };
+        });
+      } catch (error) {
+        console.error(
+          'FormulusMessageHandlers: failed to get available forms',
+          error,
+        );
+        return [];
+      }
     },
     onGetObservations: async (
       formType: string,
