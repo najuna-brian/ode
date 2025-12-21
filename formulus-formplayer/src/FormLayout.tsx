@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { Box, Paper, Stack, Button } from '@mui/material';
 
 interface FormLayoutProps {
@@ -65,6 +65,45 @@ const FormLayout: React.FC<FormLayoutProps> = ({
   contentBottomPadding = 120,
   showNavigation = true,
 }) => {
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      const viewport = window.visualViewport;
+
+      const handleViewportChange = () => {
+        if (!viewport) return;
+
+        const heightDifference = window.innerHeight - viewport.height;
+        const keyboardThreshold = 150;
+        setIsKeyboardVisible(heightDifference > keyboardThreshold);
+      };
+
+      viewport.addEventListener('resize', handleViewportChange);
+      viewport.addEventListener('scroll', handleViewportChange);
+      handleViewportChange();
+
+      return () => {
+        viewport.removeEventListener('resize', handleViewportChange);
+        viewport.removeEventListener('scroll', handleViewportChange);
+      };
+    } else {
+      // Fallback for browsers without Visual Viewport API
+      const handleResize = () => {
+        const currentHeight = window.innerHeight;
+        const initialHeight = window.screen.height;
+        setIsKeyboardVisible(currentHeight < initialHeight * 0.75);
+      };
+
+      window.addEventListener('resize', handleResize);
+      handleResize();
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, []);
+
   return (
     <Box
       sx={{
@@ -113,7 +152,8 @@ const FormLayout: React.FC<FormLayoutProps> = ({
       </Box>
 
       {/* Navigation Bar - Sticky at bottom, non-overlapping */}
-      {showNavigation && (previousButton || nextButton) && (
+      {/* Hide navigation when keyboard is visible to prevent covering content */}
+      {showNavigation && (previousButton || nextButton) && !isKeyboardVisible && (
         <Paper
           elevation={3}
           sx={{
@@ -129,6 +169,7 @@ const FormLayout: React.FC<FormLayoutProps> = ({
             borderColor: 'divider',
             // Ensure it stays above content
             boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+            transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
           }}
         >
           <Stack
