@@ -88,9 +88,13 @@ const SettingsScreen = () => {
       await Keychain.setGenericPassword(username, password);
       const userInfo = await login(username, password);
       setLoggedInUser(userInfo);
+      ToastService.showShort('Successfully logged in!');
       navigation.navigate('MainApp');
     } catch (error: any) {
       console.error('Login failed:', error);
+      const errorMessage =
+        error?.message || 'Failed to login. Please check your credentials.';
+      ToastService.showLong(`Login failed: ${errorMessage}`);
     } finally {
       setIsLoggingIn(false);
     }
