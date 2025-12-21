@@ -1,9 +1,10 @@
 // Type definitions for WebView message handlers
 // Must match the injected interface in FormulusInterfaceDefinition.ts
-import {Observation} from '../database/models/observation';
+import {Observation} from '../database/models/Observation';
 import {
   FormInitData,
   FormCompletionResult,
+  FormInfo,
 } from './FormulusInterfaceDefinition';
 
 export interface FormulusMessageHandlers {
@@ -44,7 +45,7 @@ export interface FormulusMessageHandlers {
     input: Record<string, any>,
   ) => void;
   // New handlers to be added
-  onGetAvailableForms?: () => Promise<any>; // Adjust return type as needed (e.g., Promise<FormListItem[]>)
+  onGetAvailableForms?: () => Promise<FormInfo[]>;
   onGetObservations?: (
     formId: string,
     isDraft?: boolean,
