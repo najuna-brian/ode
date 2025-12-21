@@ -20,14 +20,23 @@ class SynkronusApi {
   private config: Configuration | null = null;
 
   async getApi(): Promise<DefaultApi> {
+    // Always check current serverUrl from storage to handle changes
+    const rawSettings = await AsyncStorage.getItem('@settings');
+    if (!rawSettings) throw new Error('Missing app settings');
+
+    const {serverUrl} = JSON.parse(rawSettings);
+
+    // If config exists but serverUrl changed, clear cache
+    if (this.config && this.config.basePath !== serverUrl) {
+      this.api = null;
+      this.config = null;
+    }
+
+    // If API exists, return it (serverUrl hasn't changed)
     if (this.api) return this.api;
 
-    // Load settings if not already loaded
+    // Load config if not already loaded
     if (!this.config) {
-      const rawSettings = await AsyncStorage.getItem('@settings');
-      if (!rawSettings) throw new Error('Missing app settings');
-
-      const {serverUrl} = JSON.parse(rawSettings);
       this.config = new Configuration({
         basePath: serverUrl,
         accessToken: async () => {

@@ -54,7 +54,7 @@ const MainAppNavigator: React.FC = () => {
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{title: 'Settings'}}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="FormManagement"
