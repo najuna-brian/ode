@@ -32,7 +32,9 @@ const wrapWithShell =
     const { schema, uischema, errors } = props;
     const label = (uischema as any)?.label || schema.title;
     const description = schema.description;
-    const required = Boolean((uischema as any)?.options?.required ?? (schema as any)?.options?.required);
+    const required = Boolean(
+      (uischema as any)?.options?.required ?? (schema as any)?.options?.required,
+    );
 
     return (
       <QuestionShell title={label} description={description} required={required} error={errors}>
@@ -47,7 +49,9 @@ const CardEnumControl = (props: AnyControlProps) => {
   const { data, handleChange, path, schema, uischema, errors, enabled = true } = props;
   const label = (uischema as any)?.label || schema.title;
   const description = schema.description;
-  const required = Boolean((uischema as any)?.options?.required ?? (schema as any)?.options?.required);
+  const required = Boolean(
+    (uischema as any)?.options?.required ?? (schema as any)?.options?.required,
+  );
 
   const options =
     schema.oneOf?.map((o: any) => ({
@@ -115,7 +119,10 @@ export const shellMaterialRenderers = [
   },
   // Card-style select/oneOf/radio
   { tester: cardEnumControlTester, renderer: withJsonFormsControlProps(CardEnumControl) },
-  { tester: materialEnumControlTester, renderer: withJsonFormsControlProps(wrapWithShell(MaterialEnumControl)) },
+  {
+    tester: materialEnumControlTester,
+    renderer: withJsonFormsControlProps(wrapWithShell(MaterialEnumControl)),
+  },
   {
     tester: materialOneOfEnumControlTester,
     renderer: withJsonFormsControlProps(wrapWithShell(MaterialOneOfEnumControl)),
