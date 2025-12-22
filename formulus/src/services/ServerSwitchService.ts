@@ -30,12 +30,27 @@ class ServerSwitchService {
    * Fully reset local state and persist the new server URL.
    */
   async resetForServerChange(serverUrl: string): Promise<void> {
-    // 1) Reset DB
+    // 1) Clear attachments on disk (fail fast)
+    const attachmentsDirectory = `${RNFS.DocumentDirectoryPath}/attachments`;
+    try {
+      if (await RNFS.exists(attachmentsDirectory)) {
+        await RNFS.unlink(attachmentsDirectory);
+      }
+    } catch (error) {
+      throw new Error(`Failed to delete attachments directory: ${error}`);
+    }
+    await RNFS.mkdir(attachmentsDirectory);
+    await RNFS.mkdir(`${attachmentsDirectory}/pending_upload`);
+
+    // 2) Clear app bundle and forms (fail fast)
+    await synkronusApi.removeAppBundleFiles();
+
+    // 3) Reset DB
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
 
-    // 2) Clear sync/app metadata + tokens
+    // 4) Clear sync/app metadata + tokens
     await AsyncStorage.multiRemove([
       '@last_seen_version',
       '@last_attachment_version',
@@ -48,23 +63,7 @@ class ServerSwitchService {
       '@tokenExpiresAt',
       '@user',
     ]);
-    // Reinitialize app version to baseline
     await AsyncStorage.setItem('@appVersion', '0');
-
-    // 3) Clear attachments on disk
-    const attachmentsDirectory = `${RNFS.DocumentDirectoryPath}/attachments`;
-    try {
-      if (await RNFS.exists(attachmentsDirectory)) {
-        await RNFS.unlink(attachmentsDirectory);
-      }
-    } catch (error) {
-      console.warn('Failed to delete attachments directory:', error);
-    }
-    await RNFS.mkdir(attachmentsDirectory);
-    await RNFS.mkdir(`${attachmentsDirectory}/pending_upload`);
-
-    // 4) Clear app bundle and forms
-    await synkronusApi.removeAppBundleFiles();
 
     // 5) Clear auth/session
     await logout().catch(error =>

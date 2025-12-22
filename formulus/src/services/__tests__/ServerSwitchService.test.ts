@@ -68,6 +68,15 @@ describe('ServerSwitchService', () => {
 
     await serverSwitchService.resetForServerChange('https://new.example');
 
+    expect(mockRNFS.exists).toHaveBeenCalledWith('/mock/doc/attachments');
+    expect(mockRNFS.unlink).toHaveBeenCalledWith('/mock/doc/attachments');
+    expect(mockRNFS.mkdir).toHaveBeenCalledWith('/mock/doc/attachments');
+    expect(mockRNFS.mkdir).toHaveBeenCalledWith(
+      '/mock/doc/attachments/pending_upload',
+    );
+
+    expect(mockSynkronusApi.removeAppBundleFiles).toHaveBeenCalled();
+
     expect(mockDatabase.write).toHaveBeenCalled();
     expect(mockDatabase.unsafeResetDatabase).toHaveBeenCalled();
 
@@ -85,14 +94,6 @@ describe('ServerSwitchService', () => {
     ]);
     expect(mockAsyncStorage.setItem).toHaveBeenCalledWith('@appVersion', '0');
 
-    expect(mockRNFS.exists).toHaveBeenCalledWith('/mock/doc/attachments');
-    expect(mockRNFS.unlink).toHaveBeenCalledWith('/mock/doc/attachments');
-    expect(mockRNFS.mkdir).toHaveBeenCalledWith('/mock/doc/attachments');
-    expect(mockRNFS.mkdir).toHaveBeenCalledWith(
-      '/mock/doc/attachments/pending_upload',
-    );
-
-    expect(mockSynkronusApi.removeAppBundleFiles).toHaveBeenCalled();
     expect(mockLogout).toHaveBeenCalled();
     expect(mockServerConfigService.saveServerUrl).toHaveBeenCalledWith(
       'https://new.example',
@@ -109,5 +110,16 @@ describe('ServerSwitchService', () => {
     mockSynkronusApi.getUnsyncedAttachmentCount.mockResolvedValueOnce(5);
     const result = await serverSwitchService.getPendingAttachmentCount();
     expect(result).toBe(5);
+  });
+
+  it('throws if attachments directory cannot be deleted', async () => {
+    mockRNFS.exists.mockResolvedValueOnce(true);
+    mockRNFS.unlink.mockRejectedValueOnce(new Error('permission'));
+
+    await expect(
+      serverSwitchService.resetForServerChange('https://new.example'),
+    ).rejects.toThrow('Failed to delete attachments directory');
+
+    expect(mockDatabase.write).not.toHaveBeenCalled();
   });
 });
