@@ -10,6 +10,10 @@
  *
  * Current Version: 1.0.17
  */
+/**
+ * Current version of the interface (manual, bump on breaking changes)
+ */
+export const FORMULUS_INTERFACE_VERSION = '1.1.0';
 
 /**
  * Data passed to the Formulus app when a form is initialized
@@ -419,11 +423,6 @@ export interface FormulusCallbacks {
   ) => void;
   onReceiveFocus?: () => void;
 }
-
-/**
- * Current version of the interface
- */
-export const FORMULUS_INTERFACE_VERSION = '1.1.0';
 
 /**
  * Check if the current interface version is compatible with the required version

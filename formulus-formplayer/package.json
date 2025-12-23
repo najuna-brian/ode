@@ -1,6 +1,6 @@
 {
   "name": "formulus-formplayer",
-  "version": "0.0.3",
+  "version": "1.0",
   "private": true,
   "homepage": ".",
   "dependencies": {
@@ -35,6 +35,9 @@
   "scripts": {
     "start": "react-scripts start",
     "sync-interface": "node scripts/sync-interface.js",
+    "sync:version": "node scripts/sync-version-from-parent.js",
+    "prebuild": "npm run sync:version && npm run sync-interface && react-scripts build",
+    "prestart": "npm run sync:version && react-scripts start",
     "build": "npm run sync-interface && react-scripts build",
     "upload:android": "npm run build && node scripts/clean-rn-assets.js && node scripts/copy-to-rn.js",
     "build:rn": "npm run build && npm run copy-to-rn",

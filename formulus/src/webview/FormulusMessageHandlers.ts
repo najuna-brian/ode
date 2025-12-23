@@ -5,6 +5,7 @@ It handles the messages received from the WebView and executes the corresponding
 import {GeolocationService} from '../services/GeolocationService';
 import {WebViewMessageEvent, WebView} from 'react-native-webview';
 import RNFS from 'react-native-fs';
+import {AppVersionService} from '../services/AppVersionService';
 
 export type HandlerArgs = {
   data: any;
@@ -274,8 +275,8 @@ export function createFormulusMessageHandlers(): FormulusMessageHandlers {
     },
     onGetVersion: async (): Promise<string> => {
       console.log('FormulusMessageHandlers: onGetVersion handler invoked.');
-      // Replace with your actual version retrieval logic.
-      const version = '0.1.0-native'; // Example version
+      const appVersionService = AppVersionService.getInstance();
+      const version = await appVersionService.getVersion();
       return version;
     },
     onSubmitObservation: async (data: {
