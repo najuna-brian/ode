@@ -30,6 +30,7 @@ class SynkronusApi {
     if (this.config && this.config.basePath !== serverUrl) {
       this.api = null;
       this.config = null;
+      this.fastGetToken_cachedToken = null;
     }
 
     // If API exists, return it (serverUrl hasn't changed)
@@ -357,6 +358,10 @@ class SynkronusApi {
       return authToken;
     }
     throw new Error('Unable to retrieve auth token');
+  }
+
+  public clearTokenCache(): void {
+    this.fastGetToken_cachedToken = null;
   }
 
   private async downloadRawFiles(

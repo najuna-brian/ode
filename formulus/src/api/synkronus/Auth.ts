@@ -28,6 +28,8 @@ export const login = async (
   console.log('Logging in with', username);
   const api = await synkronusApi.getApi();
 
+  synkronusApi.clearTokenCache();
+
   const res = await api.login({
     loginRequest: {username, password},
   });

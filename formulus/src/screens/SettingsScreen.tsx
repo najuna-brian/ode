@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
   ScrollView,
+  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -21,6 +22,8 @@ import {MainAppStackParamList} from '../types/NavigationTypes';
 import {colors} from '../theme/colors';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {ToastService} from '../services/ToastService';
+import {serverSwitchService} from '../services/ServerSwitchService';
+import {syncService} from '../services/SyncService';
 
 type SettingsScreenNavigationProp = StackNavigationProp<
   MainAppStackParamList,
@@ -30,6 +33,7 @@ type SettingsScreenNavigationProp = StackNavigationProp<
 const SettingsScreen = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const [serverUrl, setServerUrl] = useState('');
+  const [initialServerUrl, setInitialServerUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -41,26 +45,141 @@ const SettingsScreen = () => {
     loadSettings();
   }, []);
 
-  const saveServerUrl = useCallback(async (url: string) => {
-    if (url.trim()) {
-      await serverConfigService.saveServerUrl(url);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (serverUrl) {
-        saveServerUrl(serverUrl);
+  const handleServerSwitchIfNeeded = useCallback(
+    async (url: string): Promise<boolean> => {
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl) {
+        ToastService.showLong('Please enter a server URL');
+        return false;
       }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [serverUrl, saveServerUrl]);
+
+      // If unchanged, just ensure it's saved
+      if (trimmedUrl === initialServerUrl) {
+        await serverConfigService.saveServerUrl(trimmedUrl);
+        return true;
+      }
+
+      try {
+        const [pendingObservations, pendingAttachments] = await Promise.all([
+          serverSwitchService.getPendingObservationCount(),
+          serverSwitchService.getPendingAttachmentCount(),
+        ]);
+
+        const performReset = async () => {
+          await serverSwitchService.resetForServerChange(trimmedUrl);
+          setInitialServerUrl(trimmedUrl);
+          setServerUrl(trimmedUrl);
+          ToastService.showShort('Switched server and cleared local data.');
+        };
+
+        const syncThenReset = async () => {
+          try {
+            await syncService.syncObservations(true);
+            await performReset();
+            return true;
+          } catch (error) {
+            console.error('Sync before server switch failed:', error);
+            ToastService.showLong(
+              'Sync failed. Please retry or proceed without syncing.',
+            );
+            return false;
+          }
+        };
+
+        return await new Promise<boolean>(resolve => {
+          const hasPending = pendingObservations > 0 || pendingAttachments > 0;
+          const message = hasPending
+            ? `Unsynced observations: ${pendingObservations}\nUnsynced attachments: ${pendingAttachments}\n\nSync is recommended before switching.`
+            : 'Switching servers will wipe all local data for the previous server.';
+
+          const buttons = hasPending
+            ? [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => {
+                    setServerUrl(initialServerUrl);
+                    resolve(false);
+                  },
+                },
+                {
+                  text: 'Proceed without syncing',
+                  style: 'destructive',
+                  onPress: () => {
+                    (async () => {
+                      try {
+                        await performReset();
+                        resolve(true);
+                      } catch (error) {
+                        console.error('Failed to switch server:', error);
+                        ToastService.showLong(
+                          'Failed to switch server. Please try again.',
+                        );
+                        resolve(false);
+                      }
+                    })();
+                  },
+                },
+                {
+                  text: 'Sync then switch',
+                  onPress: () => {
+                    (async () => {
+                      if (syncService.getIsSyncing()) {
+                        ToastService.showShort('Sync already in progress...');
+                        return;
+                      }
+                      const ok = await syncThenReset();
+                      resolve(ok);
+                    })();
+                  },
+                },
+              ]
+            : [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => {
+                    setServerUrl(initialServerUrl);
+                    resolve(false);
+                  },
+                },
+                {
+                  text: 'Yes, wipe & switch',
+                  style: 'destructive',
+                  onPress: () => {
+                    (async () => {
+                      try {
+                        await performReset();
+                        resolve(true);
+                      } catch (error) {
+                        console.error('Failed to switch server:', error);
+                        ToastService.showLong(
+                          'Failed to switch server. Please try again.',
+                        );
+                        resolve(false);
+                      }
+                    })();
+                  },
+                },
+              ];
+
+          Alert.alert('Switch server?', message, buttons, {cancelable: false});
+        });
+      } catch (error) {
+        console.error('Failed to prepare server switch:', error);
+        ToastService.showLong('Unable to check pending data. Try again.');
+        return false;
+      }
+    },
+    [initialServerUrl],
+  );
 
   const loadSettings = async () => {
     try {
       const savedUrl = await serverConfigService.getServerUrl();
       if (savedUrl) {
         setServerUrl(savedUrl);
+        setInitialServerUrl(savedUrl);
       }
 
       const credentials = await Keychain.getGenericPassword();
@@ -82,9 +201,14 @@ const SettingsScreen = () => {
     if (!serverUrl.trim() || !username.trim() || !password.trim()) {
       return;
     }
+
+    const serverReady = await handleServerSwitchIfNeeded(serverUrl);
+    if (!serverReady) {
+      return;
+    }
+
     setIsLoggingIn(true);
     try {
-      await serverConfigService.saveServerUrl(serverUrl);
       await Keychain.setGenericPassword(username, password);
       const userInfo = await login(username, password);
       setLoggedInUser(userInfo);
@@ -112,6 +236,14 @@ const SettingsScreen = () => {
         const settings = await QRSettingsService.processQRCode(
           result.data.value,
         );
+
+        const serverReady = await handleServerSwitchIfNeeded(
+          settings.serverUrl,
+        );
+        if (!serverReady) {
+          return;
+        }
+
         setServerUrl(settings.serverUrl);
         setUsername(settings.username);
         setPassword(settings.password);
