@@ -35,7 +35,9 @@ const SettingsScreen = () => {
   const [serverUrl, setServerUrl] = useState('');
   const [initialServerUrl, setInitialServerUrl] = useState('');
   const [username, setUsername] = useState('');
+  const [initialUsername, setInitialUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [initialPassword, setInitialPassword] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -96,7 +98,7 @@ const SettingsScreen = () => {
             ? [
                 {
                   text: 'Cancel',
-                  style: 'cancel',
+                  style: 'cancel' as const,
                   onPress: () => {
                     setServerUrl(initialServerUrl);
                     resolve(false);
@@ -104,7 +106,7 @@ const SettingsScreen = () => {
                 },
                 {
                   text: 'Proceed without syncing',
-                  style: 'destructive',
+                  style: 'destructive' as const,
                   onPress: () => {
                     (async () => {
                       try {
@@ -137,7 +139,7 @@ const SettingsScreen = () => {
             : [
                 {
                   text: 'Cancel',
-                  style: 'cancel',
+                  style: 'cancel' as const,
                   onPress: () => {
                     setServerUrl(initialServerUrl);
                     resolve(false);
@@ -145,7 +147,7 @@ const SettingsScreen = () => {
                 },
                 {
                   text: 'Yes, wipe & switch',
-                  style: 'destructive',
+                  style: 'destructive' as const,
                   onPress: () => {
                     (async () => {
                       try {
@@ -186,6 +188,8 @@ const SettingsScreen = () => {
       if (credentials) {
         setUsername(credentials.username);
         setPassword(credentials.password);
+        setInitialUsername(credentials.username);
+        setInitialPassword(credentials.password);
       }
 
       const userInfo = await getUserInfo();
@@ -355,24 +359,43 @@ const SettingsScreen = () => {
           />
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            (!serverUrl.trim() || !username.trim() || !password.trim()) &&
-              styles.nextButtonDisabled,
-          ]}
-          onPress={handleLogin}
-          disabled={
-            !serverUrl.trim() ||
-            !username.trim() ||
-            !password.trim() ||
-            isLoggingIn
-          }>
-          <Icon name="arrow-right" size={20} color={colors.neutral[500]} />
-          <Text style={styles.nextButtonText}>
-            {isLoggingIn ? 'Logging in...' : 'Login'}
-          </Text>
-        </TouchableOpacity>
+        {(() => {
+          const hasCredentialChanges =
+            serverUrl.trim() !== initialServerUrl ||
+            username.trim() !== initialUsername ||
+            password !== initialPassword;
+          const isFieldsEmpty =
+            !serverUrl.trim() || !username.trim() || !password.trim();
+          const isButtonDisabled =
+            isFieldsEmpty ||
+            isLoggingIn ||
+            (_loggedInUser && !hasCredentialChanges);
+
+          return (
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                isButtonDisabled && styles.nextButtonDisabled,
+              ]}
+              onPress={handleLogin}
+              disabled={!!isButtonDisabled}>
+              <Icon
+                name="arrow-right"
+                size={20}
+                color={
+                  isButtonDisabled ? colors.neutral[500] : colors.neutral.white
+                }
+              />
+              <Text
+                style={[
+                  styles.nextButtonText,
+                  isButtonDisabled && styles.nextButtonTextDisabled,
+                ]}>
+                {isLoggingIn ? 'Logging in...' : 'Login'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })()}
       </ScrollView>
 
       <QRScannerModal
@@ -462,7 +485,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 56,
     borderRadius: 8,
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.brand.primary[500],
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
@@ -477,6 +500,9 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.neutral.white,
+  },
+  nextButtonTextDisabled: {
     color: colors.neutral[500],
   },
 });
