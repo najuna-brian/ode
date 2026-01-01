@@ -14,7 +14,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import * as Keychain from 'react-native-keychain';
-import {login, getUserInfo, UserInfo} from '../api/synkronus/Auth';
+import {login} from '../api/synkronus/Auth';
 import {serverConfigService} from '../services/ServerConfigService';
 import QRScannerModal from '../components/QRScannerModal';
 import {QRSettingsService} from '../services/QRSettingsService';
@@ -35,13 +35,10 @@ const SettingsScreen = () => {
   const [serverUrl, setServerUrl] = useState('');
   const [initialServerUrl, setInitialServerUrl] = useState('');
   const [username, setUsername] = useState('');
-  const [initialUsername, setInitialUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [initialPassword, setInitialPassword] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [_loggedInUser, setLoggedInUser] = useState<UserInfo | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -188,12 +185,7 @@ const SettingsScreen = () => {
       if (credentials) {
         setUsername(credentials.username);
         setPassword(credentials.password);
-        setInitialUsername(credentials.username);
-        setInitialPassword(credentials.password);
       }
-
-      const userInfo = await getUserInfo();
-      setLoggedInUser(userInfo);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -214,8 +206,7 @@ const SettingsScreen = () => {
     setIsLoggingIn(true);
     try {
       await Keychain.setGenericPassword(username, password);
-      const userInfo = await login(username, password);
-      setLoggedInUser(userInfo);
+      await login(username, password);
       ToastService.showShort('Successfully logged in!');
       navigation.navigate('MainApp');
     } catch (error: any) {
@@ -258,8 +249,7 @@ const SettingsScreen = () => {
             settings.password,
           );
           try {
-            const userInfo = await login(settings.username, settings.password);
-            setLoggedInUser(userInfo);
+            await login(settings.username, settings.password);
             ToastService.showShort('Successfully logged in!');
             navigation.navigate('MainApp');
           } catch (error: any) {
@@ -360,16 +350,9 @@ const SettingsScreen = () => {
         </View>
 
         {(() => {
-          const hasCredentialChanges =
-            serverUrl.trim() !== initialServerUrl ||
-            username.trim() !== initialUsername ||
-            password !== initialPassword;
           const isFieldsEmpty =
             !serverUrl.trim() || !username.trim() || !password.trim();
-          const isButtonDisabled =
-            isFieldsEmpty ||
-            isLoggingIn ||
-            (_loggedInUser && !hasCredentialChanges);
+          const isButtonDisabled = isFieldsEmpty || isLoggingIn;
 
           return (
             <TouchableOpacity
