@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { ButtonProps, ButtonVariant, ButtonPosition } from '../shared/types';
+import type { ButtonProps, ButtonVariant } from '../shared/types';
 import { getOppositeVariant, getFadeDirection } from '../shared/utils';
 import tokensJson from '@ode/tokens/dist/json/tokens.json';
 
@@ -94,17 +94,6 @@ const Button: React.FC<WebButtonProps> = ({
 
   const padding = paddingMap[size];
   const fontSize = fontSizeMap[size];
-
-  // Create gradient mask for fading border effect
-  const createFadeMask = () => {
-    if (fadeDirection === 'right') {
-      // Fade on right end - gradient from opaque to transparent
-      return `linear-gradient(to right, black 0%, black 85%, transparent 100%)`;
-    } else {
-      // Fade on left end - gradient from transparent to opaque
-      return `linear-gradient(to right, transparent 0%, black 15%, black 100%)`;
-    }
-  };
 
   const buttonStyle: React.CSSProperties = {
     position: 'relative',

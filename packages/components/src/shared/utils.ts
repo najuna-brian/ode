@@ -4,7 +4,7 @@
  * Platform-agnostic utility functions
  */
 
-import { ButtonVariant, ButtonPosition, ThemeMode } from './types';
+import type { ButtonVariant, ButtonPosition, ThemeMode } from './types';
 
 /**
  * Get the opposite button variant for paired buttons
@@ -26,7 +26,7 @@ export function getOppositeVariant(variant: ButtonVariant): ButtonVariant {
  * Get text color for button based on variant and mode
  */
 export function getButtonTextColor(
-  variant: ButtonVariant,
+  _variant: ButtonVariant,
   isHovered: boolean,
   mode: ThemeMode = 'light'
 ): string {

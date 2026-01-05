@@ -5,9 +5,8 @@
  */
 
 import React from 'react';
-import Button from './Button';
-import { ButtonVariant } from '../shared/types';
-import { ButtonProps } from '../shared/types';
+import type { ButtonVariant } from '../shared/types';
+import type { ButtonProps } from '../shared/types';
 
 interface WebButtonProps extends ButtonProps {
   isPaired?: boolean;

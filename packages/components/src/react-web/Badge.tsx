@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { BadgeProps } from '../shared/types';
+import type { BadgeProps } from '../shared/types';
 import tokensJson from '@ode/tokens/dist/json/tokens.json';
 
 const tokens = tokensJson as any;
