@@ -9,24 +9,25 @@ import {
   Image,
   ScrollView,
   Alert,
+  type AlertButton,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
-import {StackNavigationProp} from '@react-navigation/stack';
+import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import * as Keychain from 'react-native-keychain';
-import {login, getUserInfo, UserInfo} from '../api/synkronus/Auth';
+import {login} from '../api/synkronus/Auth';
 import {serverConfigService} from '../services/ServerConfigService';
 import QRScannerModal from '../components/QRScannerModal';
 import {QRSettingsService} from '../services/QRSettingsService';
-import {MainAppStackParamList} from '../types/NavigationTypes';
+import {MainTabParamList} from '../types/NavigationTypes';
 import {colors} from '../theme/colors';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {ToastService} from '../services/ToastService';
 import {serverSwitchService} from '../services/ServerSwitchService';
 import {syncService} from '../services/SyncService';
 
-type SettingsScreenNavigationProp = StackNavigationProp<
-  MainAppStackParamList,
+type SettingsScreenNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
   'Settings'
 >;
 
@@ -39,7 +40,6 @@ const SettingsScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [_loggedInUser, setLoggedInUser] = useState<UserInfo | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -92,11 +92,11 @@ const SettingsScreen = () => {
             ? `Unsynced observations: ${pendingObservations}\nUnsynced attachments: ${pendingAttachments}\n\nSync is recommended before switching.`
             : 'Switching servers will wipe all local data for the previous server.';
 
-          const buttons = hasPending
+          const buttons: AlertButton[] = hasPending
             ? [
                 {
                   text: 'Cancel',
-                  style: 'cancel',
+                  style: 'cancel' as const,
                   onPress: () => {
                     setServerUrl(initialServerUrl);
                     resolve(false);
@@ -104,7 +104,7 @@ const SettingsScreen = () => {
                 },
                 {
                   text: 'Proceed without syncing',
-                  style: 'destructive',
+                  style: 'destructive' as const,
                   onPress: () => {
                     (async () => {
                       try {
@@ -137,7 +137,7 @@ const SettingsScreen = () => {
             : [
                 {
                   text: 'Cancel',
-                  style: 'cancel',
+                  style: 'cancel' as const,
                   onPress: () => {
                     setServerUrl(initialServerUrl);
                     resolve(false);
@@ -145,7 +145,7 @@ const SettingsScreen = () => {
                 },
                 {
                   text: 'Yes, wipe & switch',
-                  style: 'destructive',
+                  style: 'destructive' as const,
                   onPress: () => {
                     (async () => {
                       try {
@@ -187,9 +187,6 @@ const SettingsScreen = () => {
         setUsername(credentials.username);
         setPassword(credentials.password);
       }
-
-      const userInfo = await getUserInfo();
-      setLoggedInUser(userInfo);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -210,10 +207,9 @@ const SettingsScreen = () => {
     setIsLoggingIn(true);
     try {
       await Keychain.setGenericPassword(username, password);
-      const userInfo = await login(username, password);
-      setLoggedInUser(userInfo);
+      await login(username, password);
       ToastService.showShort('Successfully logged in!');
-      navigation.navigate('MainApp');
+      navigation.navigate('Home');
     } catch (error: any) {
       console.error('Login failed:', error);
       const errorMessage =
@@ -254,10 +250,9 @@ const SettingsScreen = () => {
             settings.password,
           );
           try {
-            const userInfo = await login(settings.username, settings.password);
-            setLoggedInUser(userInfo);
+            await login(settings.username, settings.password);
             ToastService.showShort('Successfully logged in!');
-            navigation.navigate('MainApp');
+            navigation.navigate('Home');
           } catch (error: any) {
             console.error('Auto-login failed:', error);
             const errorMessage =
@@ -355,24 +350,36 @@ const SettingsScreen = () => {
           />
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            (!serverUrl.trim() || !username.trim() || !password.trim()) &&
-              styles.nextButtonDisabled,
-          ]}
-          onPress={handleLogin}
-          disabled={
-            !serverUrl.trim() ||
-            !username.trim() ||
-            !password.trim() ||
-            isLoggingIn
-          }>
-          <Icon name="arrow-right" size={20} color={colors.neutral[500]} />
-          <Text style={styles.nextButtonText}>
-            {isLoggingIn ? 'Logging in...' : 'Login'}
-          </Text>
-        </TouchableOpacity>
+        {(() => {
+          const isFieldsEmpty =
+            !serverUrl.trim() || !username.trim() || !password.trim();
+          const isButtonDisabled = isFieldsEmpty || isLoggingIn;
+
+          return (
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                isButtonDisabled && styles.nextButtonDisabled,
+              ]}
+              onPress={handleLogin}
+              disabled={!!isButtonDisabled}>
+              <Icon
+                name="arrow-right"
+                size={20}
+                color={
+                  isButtonDisabled ? colors.neutral[500] : colors.neutral.white
+                }
+              />
+              <Text
+                style={[
+                  styles.nextButtonText,
+                  isButtonDisabled && styles.nextButtonTextDisabled,
+                ]}>
+                {isLoggingIn ? 'Logging in...' : 'Login'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })()}
       </ScrollView>
 
       <QRScannerModal
@@ -462,7 +469,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 56,
     borderRadius: 8,
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.brand.primary[500],
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
@@ -477,6 +484,9 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.neutral.white,
+  },
+  nextButtonTextDisabled: {
     color: colors.neutral[500],
   },
 });
