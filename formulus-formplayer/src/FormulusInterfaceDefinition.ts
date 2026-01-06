@@ -232,12 +232,7 @@ export interface FormObservation {
  * @property {string} formType - The form type that was being edited
  */
 export interface FormCompletionResult {
-  status:
-    | 'form_submitted'
-    | 'form_updated'
-    | 'draft_saved'
-    | 'cancelled'
-    | 'error';
+  status: 'form_submitted' | 'form_updated' | 'draft_saved' | 'cancelled' | 'error';
   observationId?: string;
   formData?: Record<string, any>;
   message?: string;
@@ -293,10 +288,7 @@ export interface FormulusInterface {
    * @param {Object} finalData - The final form data to submit
    * @returns {Promise<string>} The observationId of the submitted form
    */
-  submitObservation(
-    formType: string,
-    finalData: Record<string, any>,
-  ): Promise<string>;
+  submitObservation(formType: string, finalData: Record<string, any>): Promise<string>;
 
   /**
    * Update an existing form
@@ -347,11 +339,7 @@ export interface FormulusInterface {
    * @param {Object} options - Additional options for the subform
    * @returns {Promise<void>}
    */
-  callSubform(
-    fieldId: string,
-    formType: string,
-    options: Record<string, any>,
-  ): Promise<void>;
+  callSubform(fieldId: string, formType: string, options: Record<string, any>): Promise<void>;
 
   /**
    * Request audio recording for a field
@@ -400,11 +388,7 @@ export interface FormulusInterface {
    * @param {Object} input - The input data for the model
    * @returns {Promise<void>}
    */
-  runLocalModel(
-    fieldId: string,
-    modelId: string,
-    input: Record<string, any>,
-  ): Promise<void>;
+  runLocalModel(fieldId: string, modelId: string, input: Record<string, any>): Promise<void>;
 }
 
 /**

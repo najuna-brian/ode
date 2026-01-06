@@ -140,13 +140,14 @@ const FormLayout: React.FC<FormLayoutProps> = ({
           overflowY: 'auto',
           overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: showNavigation && (previousButton || nextButton) && !isKeyboardVisible
-            ? {
-                xs: `calc(${theme.spacing(11)} + env(safe-area-inset-bottom, 0px))`,
-                sm: `calc(${theme.spacing(12)} + env(safe-area-inset-bottom, 0px))`,
-                md: `calc(${theme.spacing(13)} + env(safe-area-inset-bottom, 0px))`,
-              }
-            : theme.spacing(15),
+          paddingBottom:
+            showNavigation && (previousButton || nextButton) && !isKeyboardVisible
+              ? {
+                  xs: `calc(${theme.spacing(11)} + env(safe-area-inset-bottom, 0px))`,
+                  sm: `calc(${theme.spacing(12)} + env(safe-area-inset-bottom, 0px))`,
+                  md: `calc(${theme.spacing(13)} + env(safe-area-inset-bottom, 0px))`,
+                }
+              : theme.spacing(15),
           overscrollBehavior: 'contain',
           position: 'relative',
         })}
@@ -164,7 +165,7 @@ const FormLayout: React.FC<FormLayoutProps> = ({
             right: 0,
             zIndex: theme.zIndex.appBar,
             width: '100%',
-            padding: { 
+            padding: {
               xs: theme.spacing(1.5, 2),
               sm: theme.spacing(2, 3),
               md: theme.spacing(2.5, 4),
