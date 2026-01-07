@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Button, Typography, Box, CircularProgress, Paper, IconButton, Chip } from '@mui/material';
+import { Typography, Box, CircularProgress, Paper, IconButton, Chip } from '@mui/material';
 import {
   AttachFile as FileIcon,
   Delete as DeleteIcon,

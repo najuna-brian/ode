@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { rankWith, ControlProps, formatIs } from '@jsonforms/core';
 import { withJsonFormsControlProps } from '@jsonforms/react';
-import {
-  Button,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Grid,
-  Divider,
-  IconButton,
-} from '@mui/material';
+import { Typography, Box, Card, CardContent, Chip, Grid, Divider, IconButton } from '@mui/material';
 import {
   Videocam as VideocamIcon,
   PlayArrow as PlayIcon,

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { withJsonFormsControlProps } from '@jsonforms/react';
 import { ControlProps, rankWith, formatIs } from '@jsonforms/core';
-import { Box, Button, Typography, Paper, IconButton, LinearProgress, Chip } from '@mui/material';
+import { Box, Typography, Paper, IconButton, LinearProgress, Chip } from '@mui/material';
 import {
   Mic as MicIcon,
   Stop as StopIcon,

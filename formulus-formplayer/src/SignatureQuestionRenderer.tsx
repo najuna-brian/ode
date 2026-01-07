@@ -69,7 +69,7 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
   }, [fieldId, handleChange, path]);
 
   // Handle canvas signature drawing
-  const handleCanvasSignature = useCallback(() => {
+  const _handleCanvasSignature = useCallback(() => {
     setShowCanvas(true);
     setError(null);
   }, []);
