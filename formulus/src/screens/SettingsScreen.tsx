@@ -226,7 +226,14 @@ const SettingsScreen = () => {
     } finally {
       setIsLoggingIn(false);
     }
-  }, [serverUrl, username, password, isLoggingIn, handleServerSwitchIfNeeded, navigation]);
+  }, [
+    serverUrl,
+    username,
+    password,
+    isLoggingIn,
+    handleServerSwitchIfNeeded,
+    navigation,
+  ]);
 
   const handleQRResult = async (result: any) => {
     setShowQRScanner(false);
