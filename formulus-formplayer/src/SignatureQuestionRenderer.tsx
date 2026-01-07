@@ -351,11 +351,7 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
               <SignatureIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
             )}
           </IconButton>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 2, textAlign: 'center' }}
-          >
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
             {isCapturing ? 'Capturing signature...' : 'Tap to capture signature'}
           </Typography>
         </Box>

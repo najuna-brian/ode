@@ -279,11 +279,7 @@ const PhotoQuestionRenderer: React.FC<PhotoQuestionProps> = ({
           >
             <PhotoCamera sx={{ fontSize: { xs: 28, sm: 32 } }} />
           </IconButton>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 2, textAlign: 'center' }}
-          >
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
             {isLoading ? 'Opening camera...' : 'Tap to capture photo'}
           </Typography>
         </Box>

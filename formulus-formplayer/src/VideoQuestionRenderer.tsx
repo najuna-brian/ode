@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { rankWith, ControlProps, formatIs } from '@jsonforms/core';
 import { withJsonFormsControlProps } from '@jsonforms/react';
-import { Button, Typography, Box, Card, CardContent, Chip, Grid, Divider, IconButton } from '@mui/material';
+import {
+  Button,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Grid,
+  Divider,
+  IconButton,
+} from '@mui/material';
 import {
   Videocam as VideocamIcon,
   PlayArrow as PlayIcon,
@@ -199,12 +209,7 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
               >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
               </IconButton>
-              <IconButton
-                onClick={handleStop}
-                disabled={isDisabled}
-                size="small"
-                aria-label="Stop"
-              >
+              <IconButton onClick={handleStop} disabled={isDisabled} size="small" aria-label="Stop">
                 <StopIcon />
               </IconButton>
             </Box>
@@ -310,11 +315,7 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
           >
             <VideocamIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
           </IconButton>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 2, textAlign: 'center' }}
-          >
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
             Tap to record video
           </Typography>
         </Box>

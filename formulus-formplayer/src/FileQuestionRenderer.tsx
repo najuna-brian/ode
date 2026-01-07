@@ -189,11 +189,7 @@ const FileQuestionRenderer: React.FC<ControlProps> = ({
               <FileIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
             )}
           </IconButton>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 2, textAlign: 'center' }}
-          >
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
             {isSelecting ? 'Selecting file...' : 'Tap to select file'}
           </Typography>
         </Box>
@@ -228,7 +224,6 @@ const FileQuestionRenderer: React.FC<ControlProps> = ({
                   </Box>
                 </Box>
               </Box>
-
             </Box>
 
             <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', mt: 2 }}>

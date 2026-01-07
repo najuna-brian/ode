@@ -257,16 +257,10 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
             >
               <MicIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
             </IconButton>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 2, textAlign: 'center' }}
-            >
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
               {isLoading ? 'Recording...' : 'Tap to record audio'}
             </Typography>
-            {isLoading && (
-              <LinearProgress sx={{ mt: 2, width: '100%', maxWidth: 200 }} />
-            )}
+            {isLoading && <LinearProgress sx={{ mt: 2, width: '100%', maxWidth: 200 }} />}
           </Box>
         ) : (
           // Playback State
@@ -354,12 +348,7 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
               >
                 <RefreshIcon />
               </IconButton>
-              <IconButton
-                onClick={handleDelete}
-                color="error"
-                size="small"
-                aria-label="Delete"
-              >
+              <IconButton onClick={handleDelete} color="error" size="small" aria-label="Delete">
                 <DeleteIcon />
               </IconButton>
             </Box>
