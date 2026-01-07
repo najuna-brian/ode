@@ -11,6 +11,7 @@ import {
   CircularProgress,
   Grid,
   Divider,
+  IconButton,
 } from '@mui/material';
 import {
   LocationOn as LocationIcon,
@@ -185,54 +186,71 @@ const GPSQuestionRenderer: React.FC<GPSQuestionRendererProps> = (props) => {
             </Grid>
 
             {/* Action Buttons */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
+              <IconButton
                 onClick={handleCaptureLocation}
                 disabled={isDisabled}
+                color="primary"
                 size="small"
+                aria-label="Re-capture location"
               >
-                Re-capture
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
+                <RefreshIcon />
+              </IconButton>
+              <IconButton
                 onClick={handleDeleteLocation}
                 disabled={isDisabled}
+                color="error"
                 size="small"
+                aria-label="Delete location"
               >
-                Delete
-              </Button>
+                <DeleteIcon />
+              </IconButton>
             </Box>
           </CardContent>
         </Card>
       ) : (
-        <Box>
-          <Button
-            variant="contained"
-            startIcon={
-              isCapturing ? <CircularProgress size={20} color="inherit" /> : <LocationIcon />
-            }
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: { xs: 4, sm: 5 },
+            px: 2,
+          }}
+        >
+          <IconButton
             onClick={handleCaptureLocation}
             disabled={isDisabled}
-            fullWidth
+            color="primary"
+            size="large"
             sx={{
-              py: 1.5,
-              fontSize: '1rem',
-              textTransform: 'none',
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&:disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              },
             }}
+            aria-label="Capture GPS location"
           >
-            {isCapturing ? 'Capturing Location...' : 'Capture GPS Location'}
-          </Button>
-
+            {isCapturing ? (
+              <CircularProgress size={24} sx={{ color: 'white' }} />
+            ) : (
+              <LocationIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+            )}
+          </IconButton>
           <Typography
-            variant="caption"
+            variant="body2"
             color="text.secondary"
-            sx={{ mt: 1, display: 'block', textAlign: 'center' }}
+            sx={{ mt: 2, textAlign: 'center' }}
           >
-            This will request your device's current GPS coordinates
+            {isCapturing ? 'Capturing location...' : 'Tap to capture GPS location'}
           </Typography>
         </Box>
       )}
