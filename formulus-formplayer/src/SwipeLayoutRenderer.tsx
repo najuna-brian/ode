@@ -13,19 +13,13 @@ interface SwipeLayoutProps extends ControlProps {
   onPageChange: (page: number) => void;
 }
 
-export const swipeLayoutTester: RankedTester = rankWith(
-  3,
-  uiTypeIs('SwipeLayout'),
-);
+export const swipeLayoutTester: RankedTester = rankWith(3, uiTypeIs('SwipeLayout'));
 
 const isGroupElement = (uischema: any): boolean => {
   return uischema && uischema.type === 'Group';
 };
 
-export const groupAsSwipeLayoutTester: RankedTester = rankWith(
-  2,
-  isGroupElement,
-);
+export const groupAsSwipeLayoutTester: RankedTester = rankWith(2, isGroupElement);
 
 const SwipeLayoutRenderer = ({
   schema,
@@ -81,7 +75,8 @@ const SwipeLayoutRenderer = ({
     const isEmpty = (value: any): boolean => {
       if (value === null || value === undefined || value === '') return true;
       if (Array.isArray(value) && value.length === 0) return true;
-      if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return true;
+      if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0)
+        return true;
       return false;
     };
 
@@ -121,7 +116,7 @@ const SwipeLayoutRenderer = ({
       const parentPath = pathParts.slice(0, -1);
       const fieldName = pathParts[pathParts.length - 1];
       let parentSchema: any = fullSchema;
-      
+
       for (const part of parentPath) {
         if (parentSchema?.properties?.[part]) {
           parentSchema = parentSchema.properties[part];
@@ -132,7 +127,7 @@ const SwipeLayoutRenderer = ({
       }
 
       const isRequired = parentSchema?.required?.includes(fieldName);
-      
+
       if (isRequired && isEmpty(fieldValue)) {
         const hasError = errors.some((error: any) => {
           const errorPath = error.instancePath || error.path;
@@ -171,15 +166,15 @@ const SwipeLayoutRenderer = ({
 
       const isNavigatingForward = newPage > currentPage;
       const isOnFinalize = layouts[currentPage]?.type === 'Finalize';
-      
+
       if (isNavigatingForward && !isOnFinalize) {
         const missingFields = getMissingRequiredFieldsOnPage();
-        
+
         if (missingFields.length > 0) {
-          const message = `Missing required ${missingFields.length === 1 ? 'field' : 'fields'}: ${missingFields.slice(0, 2).join(', ')}${
-            missingFields.length > 2 ? '...' : ''
-          }`;
-          
+          const message = `Missing required ${
+            missingFields.length === 1 ? 'field' : 'fields'
+          }: ${missingFields.slice(0, 2).join(', ')}${missingFields.length > 2 ? '...' : ''}`;
+
           setPendingNavigation(newPage);
           setSnackbarMessage(message);
           setSnackbarOpen(true);
@@ -194,7 +189,14 @@ const SwipeLayoutRenderer = ({
       }
       performNavigation(newPage);
     },
-    [isNavigating, currentPage, layouts, getMissingRequiredFieldsOnPage, performNavigation, snackbarOpen],
+    [
+      isNavigating,
+      currentPage,
+      layouts,
+      getMissingRequiredFieldsOnPage,
+      performNavigation,
+      snackbarOpen,
+    ],
   );
 
   const handlers = useSwipeable({
@@ -278,7 +280,7 @@ const SwipeLayoutRenderer = ({
           />
         )}
       </div>
-      
+
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
@@ -288,7 +290,7 @@ const SwipeLayoutRenderer = ({
           <Button
             size="small"
             onClick={handleGoBack}
-            sx={{ 
+            sx={{
               color: 'primary.light',
               minWidth: 'auto',
               textTransform: 'none',
@@ -307,7 +309,8 @@ const SwipeLayoutRenderer = ({
           '& .MuiSnackbarContent-root': {
             backgroundColor: 'rgba(0, 0, 0, 0.87)',
             color: '#fff',
-            boxShadow: '0px 3px 5px -1px rgba(0,0,0,0.2), 0px 6px 10px 0px rgba(0,0,0,0.14), 0px 1px 18px 0px rgba(0,0,0,0.12)',
+            boxShadow:
+              '0px 3px 5px -1px rgba(0,0,0,0.2), 0px 6px 10px 0px rgba(0,0,0,0.14), 0px 1px 18px 0px rgba(0,0,0,0.12)',
           },
         }}
       />
