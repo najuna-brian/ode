@@ -72,13 +72,13 @@ export class ExtensionService {
 
   /**
    * Get merged extensions for a custom app
-   * 
+   *
    * Discovers ext.json files in:
    * - /forms/ext.json (app-level)
    * - /forms/{formName}/ext.json (form-level)
-   * 
+   *
    * Merges with precedence: form-level → app-level → core defaults
-   * 
+   *
    * @param customAppPath - Path to the custom app directory
    * @param formName - Optional form name for form-level extensions
    * @returns Merged extension object
@@ -275,4 +275,3 @@ export class ExtensionService {
     return extensions;
   }
 }
-

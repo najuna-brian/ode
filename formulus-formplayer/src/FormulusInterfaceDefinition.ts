@@ -16,18 +16,24 @@
  */
 export interface ExtensionMetadata {
   definitions?: Record<string, any>;
-  functions?: Record<string, {
-    name: string;
-    module: string;
-    export?: string;
-  }>;
-  renderers?: Record<string, {
-    name: string;
-    format: string;
-    module: string;
-    tester?: string;
-    renderer?: string;
-  }>;
+  functions?: Record<
+    string,
+    {
+      name: string;
+      module: string;
+      export?: string;
+    }
+  >;
+  renderers?: Record<
+    string,
+    {
+      name: string;
+      format: string;
+      module: string;
+      tester?: string;
+      renderer?: string;
+    }
+  >;
   basePath?: string; // Base path for loading modules
 }
 

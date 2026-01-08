@@ -1,6 +1,6 @@
 /**
  * Extension Loader for Formplayer
- * 
+ *
  * Dynamically loads and registers custom extensions (renderers, functions, definitions)
  * from custom app extensions.
  */
@@ -52,9 +52,7 @@ export interface ExtensionLoadResult {
 /**
  * Load extensions dynamically
  */
-export async function loadExtensions(
-  metadata: ExtensionMetadata,
-): Promise<ExtensionLoadResult> {
+export async function loadExtensions(metadata: ExtensionMetadata): Promise<ExtensionLoadResult> {
   const result: ExtensionLoadResult = {
     renderers: [],
     functions: new Map(),
@@ -78,7 +76,9 @@ export async function loadExtensions(
       } catch (error) {
         result.errors.push({
           type: 'renderer_load_error',
-          message: `Failed to load renderer ${key}: ${error instanceof Error ? error.message : String(error)}`,
+          message: `Failed to load renderer ${key}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
           details: { renderer: key, error },
         });
         console.error(`Failed to load renderer ${key}:`, error);
@@ -97,7 +97,9 @@ export async function loadExtensions(
       } catch (error) {
         result.errors.push({
           type: 'function_load_error',
-          message: `Failed to load function ${key}: ${error instanceof Error ? error.message : String(error)}`,
+          message: `Failed to load function ${key}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
           details: { function: key, error },
         });
         console.warn(`Failed to load function ${key}:`, error);
@@ -117,9 +119,7 @@ async function loadRenderer(
 ): Promise<LoadedRenderer | null> {
   try {
     // Construct module path
-    const modulePath = basePath
-      ? `${basePath}/${metadata.module}`
-      : metadata.module;
+    const modulePath = basePath ? `${basePath}/${metadata.module}` : metadata.module;
 
     // Dynamic import - handle both file:// URLs and relative paths
     let module: any;
@@ -128,9 +128,7 @@ async function loadRenderer(
       module = await import(/* @vite-ignore */ modulePath);
     } catch (importError) {
       // Fallback: try with .js extension
-      const modulePathWithExt = modulePath.endsWith('.js')
-        ? modulePath
-        : `${modulePath}.js`;
+      const modulePathWithExt = modulePath.endsWith('.js') ? modulePath : `${modulePath}.js`;
       module = await import(/* @vite-ignore */ modulePathWithExt);
     }
 
@@ -138,17 +136,12 @@ async function loadRenderer(
     const testerName = metadata.tester || `${metadata.name}Tester`;
     const tester = module[testerName] || module.default?.tester;
     if (!tester) {
-      throw new Error(
-        `Tester function "${testerName}" not found in module ${metadata.module}`,
-      );
+      throw new Error(`Tester function "${testerName}" not found in module ${metadata.module}`);
     }
 
     // Get renderer component
     const rendererName = metadata.renderer || metadata.name;
-    const renderer =
-      module[rendererName] ||
-      module.default?.renderer ||
-      module.default;
+    const renderer = module[rendererName] || module.default?.renderer || module.default;
     if (!renderer) {
       throw new Error(
         `Renderer component "${rendererName}" not found in module ${metadata.module}`,
@@ -174,18 +167,14 @@ async function loadFunction(
 ): Promise<Function | null> {
   try {
     // Construct module path
-    const modulePath = basePath
-      ? `${basePath}/${metadata.module}`
-      : metadata.module;
+    const modulePath = basePath ? `${basePath}/${metadata.module}` : metadata.module;
 
     // Dynamic import
     let module: any;
     try {
       module = await import(/* @vite-ignore */ modulePath);
     } catch (importError) {
-      const modulePathWithExt = modulePath.endsWith('.js')
-        ? modulePath
-        : `${modulePath}.js`;
+      const modulePathWithExt = modulePath.endsWith('.js') ? modulePath : `${modulePath}.js`;
       module = await import(/* @vite-ignore */ modulePathWithExt);
     }
 
@@ -204,4 +193,3 @@ async function loadFunction(
     throw error;
   }
 }
-

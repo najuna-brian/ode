@@ -261,9 +261,10 @@ const FormplayerModal = forwardRef<FormplayerModalHandle, FormplayerModalProps>(
               {} as Record<string, any>,
             ),
             // Base path for loading modules (file:// URL for WebView)
-            basePath: Platform.OS === 'android'
-              ? `file:///android_asset/app`
-              : `file://${customAppPath}`,
+            basePath:
+              Platform.OS === 'android'
+                ? `file:///android_asset/app`
+                : `file://${customAppPath}`,
           };
         }
       } catch (error) {

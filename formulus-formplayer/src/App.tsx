@@ -1,4 +1,12 @@
-import React, { useCallback, useState, useEffect, useRef, createContext, useContext, useMemo } from 'react';
+import React, {
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+  createContext,
+  useContext,
+  useMemo,
+} from 'react';
 import './App.css';
 import { JsonForms } from '@jsonforms/react';
 import { materialRenderers, materialCells } from '@jsonforms/material-renderers';
@@ -204,7 +212,9 @@ function App() {
   const [formInitData, setFormInitData] = useState<FormInitData | null>(null);
   const [showDraftSelector, setShowDraftSelector] = useState(false);
   const [pendingFormInit, setPendingFormInit] = useState<FormInitData | null>(null);
-  const [extensionRenderers, setExtensionRenderers] = useState<JsonFormsRendererRegistryEntry[]>([]);
+  const [extensionRenderers, setExtensionRenderers] = useState<JsonFormsRendererRegistryEntry[]>(
+    [],
+  );
   const [extensionFunctions, setExtensionFunctions] = useState<Map<string, Function>>(new Map());
   const [extensionDefinitions, setExtensionDefinitions] = useState<Record<string, any>>({});
 
@@ -216,7 +226,14 @@ function App() {
   const initializeForm = useCallback(
     async (initData: FormInitData) => {
       try {
-        const { formType: receivedFormType, params, savedData, formSchema, uiSchema, extensions } = initData;
+        const {
+          formType: receivedFormType,
+          params,
+          savedData,
+          formSchema,
+          uiSchema,
+          extensions,
+        } = initData;
 
         setFormInitData(initData);
 
