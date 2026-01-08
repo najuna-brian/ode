@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -194,20 +194,28 @@ const SettingsScreen = () => {
     }
   };
 
-  const handleLogin = async () => {
-    if (!serverUrl.trim() || !username.trim() || !password.trim()) {
+  const handleLogin = useCallback(async () => {
+    const trimmedUrl = serverUrl.trim();
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedUrl || !trimmedUsername || !trimmedPassword) {
       return;
     }
 
-    const serverReady = await handleServerSwitchIfNeeded(serverUrl);
+    if (isLoggingIn) {
+      return;
+    }
+
+    const serverReady = await handleServerSwitchIfNeeded(trimmedUrl);
     if (!serverReady) {
       return;
     }
 
     setIsLoggingIn(true);
     try {
-      await Keychain.setGenericPassword(username, password);
-      await login(username, password);
+      await Keychain.setGenericPassword(trimmedUsername, trimmedPassword);
+      await login(trimmedUsername, trimmedPassword);
       ToastService.showShort('Successfully logged in!');
       navigation.navigate('Home');
     } catch (error: any) {
@@ -218,7 +226,14 @@ const SettingsScreen = () => {
     } finally {
       setIsLoggingIn(false);
     }
-  };
+  }, [
+    serverUrl,
+    username,
+    password,
+    isLoggingIn,
+    handleServerSwitchIfNeeded,
+    navigation,
+  ]);
 
   const handleQRResult = async (result: any) => {
     setShowQRScanner(false);
@@ -274,6 +289,12 @@ const SettingsScreen = () => {
     }
   };
 
+  const isButtonDisabled = useMemo(() => {
+    const isFieldsEmpty =
+      !serverUrl.trim() || !username.trim() || !password.trim();
+    return isFieldsEmpty || isLoggingIn;
+  }, [serverUrl, username, password, isLoggingIn]);
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -298,7 +319,9 @@ const SettingsScreen = () => {
 
       <ScrollView
         style={styles.card}
-        contentContainerStyle={styles.cardContent}>
+        contentContainerStyle={styles.cardContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         <Text style={styles.title}>
           Please enter the server you want to connect to.
         </Text>
@@ -350,36 +373,29 @@ const SettingsScreen = () => {
           />
         </View>
 
-        {(() => {
-          const isFieldsEmpty =
-            !serverUrl.trim() || !username.trim() || !password.trim();
-          const isButtonDisabled = isFieldsEmpty || isLoggingIn;
-
-          return (
-            <TouchableOpacity
-              style={[
-                styles.nextButton,
-                isButtonDisabled && styles.nextButtonDisabled,
-              ]}
-              onPress={handleLogin}
-              disabled={!!isButtonDisabled}>
-              <Icon
-                name="arrow-right"
-                size={20}
-                color={
-                  isButtonDisabled ? colors.neutral[500] : colors.neutral.white
-                }
-              />
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  isButtonDisabled && styles.nextButtonTextDisabled,
-                ]}>
-                {isLoggingIn ? 'Logging in...' : 'Login'}
-              </Text>
-            </TouchableOpacity>
-          );
-        })()}
+        <TouchableOpacity
+          style={[
+            styles.nextButton,
+            isButtonDisabled && styles.nextButtonDisabled,
+          ]}
+          onPress={handleLogin}
+          disabled={isButtonDisabled}
+          activeOpacity={isButtonDisabled ? 1 : 0.7}>
+          <Icon
+            name="arrow-right"
+            size={20}
+            color={
+              isButtonDisabled ? colors.neutral[500] : colors.neutral.white
+            }
+          />
+          <Text
+            style={[
+              styles.nextButtonText,
+              isButtonDisabled && styles.nextButtonTextDisabled,
+            ]}>
+            {isLoggingIn ? 'Logging in...' : 'Login'}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <QRScannerModal
