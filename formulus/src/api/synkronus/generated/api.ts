@@ -746,6 +746,18 @@ export interface Observation {
    * @memberof Observation
    */
   geolocation?: ObservationGeolocation | null;
+  /**
+   * Author/creator of the observation
+   * @type {string}
+   * @memberof Observation
+   */
+  author: string;
+  /**
+   * Device ID that created the observation
+   * @type {string}
+   * @memberof Observation
+   */
+  device_id: string;
 }
 /**
  * Optional geolocation data for the observation

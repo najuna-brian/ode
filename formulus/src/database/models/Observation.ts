@@ -22,8 +22,8 @@ export interface Observation {
   deleted: boolean;
   data: ObservationData;
   geolocation: ObservationGeolocation | null;
-  author?: string | null;
-  deviceId?: string | null;
+  author: string;
+  deviceId: string;
 }
 
 /**

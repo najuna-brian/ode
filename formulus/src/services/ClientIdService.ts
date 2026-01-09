@@ -1,7 +1,11 @@
 /**
  * ClientIdService - Simple and robust client identification for sync operations
  *
- * Uses react-native-device-info's getAndroidId() for consistent device identification
+ * Uses react-native-device-info's getUniqueId() for cross-platform device identification:
+ * - Android: Returns Android ID (same as getAndroidId())
+ * - iOS: Returns Identifier for Vendor (IDFV) or generated ID stored in Keychain
+ *
+ * This ensures consistent device identification across both platforms.
  */
 
 import DeviceInfo from 'react-native-device-info';
@@ -20,7 +24,9 @@ export class ClientIdService {
   }
 
   /**
-   * Get the client ID - uses device's Android ID with formulus prefix
+   * Get the client ID - uses device's unique ID with formulus prefix
+   * - Android: Uses Android ID (stable across app reinstalls)
+   * - iOS: Uses IDFV or generated ID (persists in Keychain)
    * Caches the result for performance
    */
   public async getClientId(): Promise<string> {
@@ -29,7 +35,10 @@ export class ClientIdService {
     }
 
     try {
-      const deviceId = await DeviceInfo.getAndroidId();
+      // Use getUniqueId() for cross-platform support
+      // - Android: Returns Android ID (same as getAndroidId())
+      // - iOS: Returns IDFV or generated ID stored in Keychain
+      const deviceId = await DeviceInfo.getUniqueId();
       this.cachedClientId = `formulus-${deviceId}`;
 
       console.log('ClientIdService: Generated client ID:', this.cachedClientId);
