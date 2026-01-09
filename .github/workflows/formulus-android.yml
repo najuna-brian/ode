@@ -7,10 +7,12 @@ on:
       - dev
     paths:
       - 'formulus/**'
+      - 'formulus-formplayer/**'
       - '.github/workflows/formulus-android.yml'
   pull_request:
     paths:
       - 'formulus/**'
+      - 'formulus-formplayer/**'
       - '.github/workflows/formulus-android.yml'
   release:
     types: [published]
@@ -37,10 +39,20 @@ jobs:
           cache-dependency-path: |
             formulus/package-lock.json
             formulus/package.json
+            formulus-formplayer/package-lock.json
+            formulus-formplayer/package.json
 
-      - name: Install npm dependencies
+      - name: Install npm dependencies (formulus)
         working-directory: formulus
         run: npm ci
+
+      - name: Install npm dependencies (formplayer)
+        working-directory: formulus-formplayer
+        run: npm ci
+
+      - name: Build and bundle formplayer
+        working-directory: formulus-formplayer
+        run: npm run build:rn
 
       - name: Set up Java
         uses: actions/setup-java@v4
