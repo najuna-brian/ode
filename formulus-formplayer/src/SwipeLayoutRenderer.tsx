@@ -1,7 +1,8 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { JsonFormsDispatch, withJsonFormsControlProps } from '@jsonforms/react';
+import { JsonFormsDispatch, withJsonFormsControlProps, useJsonForms } from '@jsonforms/react';
 import { ControlProps, rankWith, uiTypeIs, RankedTester } from '@jsonforms/core';
 import { useSwipeable } from 'react-swipeable';
+import { Snackbar, Button } from '@mui/material';
 import { useFormContext } from './App';
 import { draftService } from './DraftService';
 import FormProgressBar from './FormProgressBar';
@@ -12,22 +13,13 @@ interface SwipeLayoutProps extends ControlProps {
   onPageChange: (page: number) => void;
 }
 
-// Tester for SwipeLayout elements (explicitly defined)
-export const swipeLayoutTester: RankedTester = rankWith(
-  3, // Higher rank for explicit SwipeLayout
-  uiTypeIs('SwipeLayout'),
-);
+export const swipeLayoutTester: RankedTester = rankWith(3, uiTypeIs('SwipeLayout'));
 
-// Custom tester for Group elements that should be rendered as SwipeLayout
 const isGroupElement = (uischema: any): boolean => {
   return uischema && uischema.type === 'Group';
 };
 
-// Tester for Group elements that should be rendered as SwipeLayout
-export const groupAsSwipeLayoutTester: RankedTester = rankWith(
-  2, // Lower rank than explicit SwipeLayout
-  isGroupElement,
-);
+export const groupAsSwipeLayoutTester: RankedTester = rankWith(2, isGroupElement);
 
 const SwipeLayoutRenderer = ({
   schema,
@@ -42,15 +34,16 @@ const SwipeLayoutRenderer = ({
   onPageChange,
 }: SwipeLayoutProps) => {
   const [isNavigating, setIsNavigating] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<number | null>(null);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const { core } = useJsonForms();
 
-  // Handle both SwipeLayout and Group elements
-  // Use type assertion to avoid TypeScript errors
   const uiType = (uischema as any).type;
   const isExplicitSwipeLayout = uiType === 'SwipeLayout';
 
-  // For SwipeLayout, use elements directly; for Group, wrap the group in an array
   const layouts = useMemo(() => {
-    return isExplicitSwipeLayout ? (uischema as any).elements || [] : [uischema]; // For Group, treat the entire group as a single page
+    return isExplicitSwipeLayout ? (uischema as any).elements || [] : [uischema];
   }, [uischema, isExplicitSwipeLayout]);
 
   if (typeof handleChange !== 'function') {
@@ -58,19 +51,152 @@ const SwipeLayoutRenderer = ({
     handleChange = () => {};
   }
 
-  const navigateToPage = useCallback(
+  const getMissingRequiredFieldsOnPage = useCallback((): string[] => {
+    if (!core?.schema || !data || !layouts[currentPage]) return [];
+
+    const currentPageElement = layouts[currentPage];
+    const fullSchema = core.schema;
+    const errors = core.errors || [];
+    const missingFields: string[] = [];
+
+    const getFieldSchema = (fieldPath: string): any => {
+      const pathParts = fieldPath.replace(/^#\/properties\//, '').split('/');
+      let currentSchema = fullSchema;
+      for (const part of pathParts) {
+        if (currentSchema?.properties?.[part]) {
+          currentSchema = currentSchema.properties[part];
+        } else {
+          return null;
+        }
+      }
+      return currentSchema;
+    };
+
+    const isEmpty = (value: any): boolean => {
+      if (value === null || value === undefined || value === '') return true;
+      if (Array.isArray(value) && value.length === 0) return true;
+      if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0)
+        return true;
+      return false;
+    };
+
+    const getPageControls = (element: any): any[] => {
+      const controls: any[] = [];
+      if (element.type === 'Control' && element.scope) {
+        controls.push(element);
+      }
+      if (element.elements && Array.isArray(element.elements)) {
+        element.elements.forEach((el: any) => {
+          controls.push(...getPageControls(el));
+        });
+      }
+      return controls;
+    };
+
+    const pageControls = getPageControls(currentPageElement);
+
+    pageControls.forEach((control) => {
+      if (!control.scope) return;
+
+      const fieldPath = control.scope;
+      const fieldSchema = getFieldSchema(fieldPath);
+      if (!fieldSchema) return;
+
+      const pathParts = fieldPath.replace(/^#\/properties\//, '').split('/');
+      let fieldValue = data;
+      for (const part of pathParts) {
+        if (fieldValue && typeof fieldValue === 'object') {
+          fieldValue = fieldValue[part];
+        } else {
+          fieldValue = undefined;
+          break;
+        }
+      }
+
+      const parentPath = pathParts.slice(0, -1);
+      const fieldName = pathParts[pathParts.length - 1];
+      let parentSchema: any = fullSchema;
+
+      for (const part of parentPath) {
+        if (parentSchema?.properties?.[part]) {
+          parentSchema = parentSchema.properties[part];
+        } else {
+          parentSchema = undefined;
+          break;
+        }
+      }
+
+      const isRequired = parentSchema?.required?.includes(fieldName);
+
+      if (isRequired && isEmpty(fieldValue)) {
+        const hasError = errors.some((error: any) => {
+          const errorPath = error.instancePath || error.path;
+          return errorPath && fieldPath.includes(errorPath.replace(/^\//, '').replace(/\//g, '/'));
+        });
+
+        if (!hasError) {
+          const label = fieldSchema.title || fieldName;
+          if (!missingFields.includes(label)) {
+            missingFields.push(label);
+          }
+        }
+      }
+    });
+
+    return missingFields;
+  }, [core?.schema, core?.errors, data, layouts, currentPage]);
+
+  const performNavigation = useCallback(
     (newPage: number) => {
       if (isNavigating) return;
 
       setIsNavigating(true);
       onPageChange(newPage);
 
-      // Add a small delay before allowing next navigation
       setTimeout(() => {
         setIsNavigating(false);
       }, 100);
     },
     [isNavigating, onPageChange],
+  );
+
+  const navigateToPage = useCallback(
+    (newPage: number) => {
+      if (isNavigating) return;
+
+      const isNavigatingForward = newPage > currentPage;
+      const isOnFinalize = layouts[currentPage]?.type === 'Finalize';
+
+      if (isNavigatingForward && !isOnFinalize) {
+        const missingFields = getMissingRequiredFieldsOnPage();
+
+        if (missingFields.length > 0) {
+          const message = `Missing required ${
+            missingFields.length === 1 ? 'field' : 'fields'
+          }: ${missingFields.slice(0, 2).join(', ')}${missingFields.length > 2 ? '...' : ''}`;
+
+          setPendingNavigation(newPage);
+          setSnackbarMessage(message);
+          setSnackbarOpen(true);
+          performNavigation(newPage);
+          return;
+        }
+      }
+
+      if (snackbarOpen) {
+        setSnackbarOpen(false);
+        setPendingNavigation(null);
+      }
+      performNavigation(newPage);
+    },
+    [
+      isNavigating,
+      currentPage,
+      layouts,
+      getMissingRequiredFieldsOnPage,
+      performNavigation,
+      snackbarOpen,
+    ],
   );
 
   const handlers = useSwipeable({
@@ -88,6 +214,26 @@ const SwipeLayoutRenderer = ({
   const isOnFinalizePage = useMemo(() => {
     return layouts[currentPage]?.type === 'Finalize';
   }, [layouts, currentPage]);
+
+  const handleSnackbarClose = useCallback(
+    (event?: React.SyntheticEvent | Event, reason?: string) => {
+      if (reason === 'clickaway') {
+        return;
+      }
+      setSnackbarOpen(false);
+      setPendingNavigation(null);
+    },
+    [],
+  );
+
+  const handleGoBack = useCallback(() => {
+    setSnackbarOpen(false);
+    if (pendingNavigation !== null && currentPage > 0) {
+      performNavigation(currentPage - 1);
+    }
+    setPendingNavigation(null);
+    setSnackbarMessage('');
+  }, [pendingNavigation, currentPage, performNavigation]);
 
   return (
     <FormLayout
@@ -134,6 +280,40 @@ const SwipeLayoutRenderer = ({
           />
         )}
       </div>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage || 'Some required fields are missing'}
+        action={
+          <Button
+            size="small"
+            onClick={handleGoBack}
+            sx={{
+              color: 'primary.light',
+              minWidth: 'auto',
+              textTransform: 'none',
+              fontWeight: 500,
+              padding: '4px 8px',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              },
+            }}
+          >
+            Go Back
+          </Button>
+        }
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.87)',
+            color: '#fff',
+            boxShadow:
+              '0px 3px 5px -1px rgba(0,0,0,0.2), 0px 6px 10px 0px rgba(0,0,0,0.14), 0px 1px 18px 0px rgba(0,0,0,0.12)',
+          },
+        }}
+      />
     </FormLayout>
   );
 };

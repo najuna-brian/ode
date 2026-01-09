@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { withJsonFormsControlProps } from '@jsonforms/react';
 import { ControlProps, rankWith, formatIs } from '@jsonforms/core';
-import { Box, Button, Typography, Paper, IconButton, LinearProgress, Chip } from '@mui/material';
+import { Box, Typography, Paper, IconButton, LinearProgress, Chip } from '@mui/material';
 import {
   Mic as MicIcon,
   Stop as StopIcon,
@@ -225,51 +225,42 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
       >
         {!hasAudio ? (
           // Recording State
-          <Box sx={{ textAlign: 'center' }}>
-            <Box sx={{ mb: 2 }}>
-              <IconButton
-                size="large"
-                sx={{
-                  width: 80,
-                  height: 80,
-                  backgroundColor: isLoading ? 'grey.300' : 'error.main',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: isLoading ? 'grey.400' : 'error.dark',
-                  },
-                  '&:disabled': {
-                    backgroundColor: 'grey.300',
-                    color: 'grey.500',
-                  },
-                }}
-                onClick={handleRecord}
-                disabled={isLoading}
-              >
-                <MicIcon sx={{ fontSize: 40 }} />
-              </IconButton>
-            </Box>
-
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              {isLoading ? 'Recording...' : 'Record Audio'}
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {isLoading
-                ? 'Please speak into your microphone'
-                : 'Tap the microphone to start recording'}
-            </Typography>
-
-            {isLoading && <LinearProgress sx={{ mb: 2 }} />}
-
-            <Button
-              variant="contained"
-              startIcon={<MicIcon />}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              py: { xs: 4, sm: 5 },
+              px: 2,
+            }}
+          >
+            <IconButton
               onClick={handleRecord}
               disabled={isLoading}
+              color="primary"
               size="large"
+              sx={{
+                width: { xs: 56, sm: 64 },
+                height: { xs: 56, sm: 64 },
+                backgroundColor: isLoading ? 'action.disabledBackground' : 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: isLoading ? 'action.disabledBackground' : 'primary.dark',
+                },
+                '&:disabled': {
+                  backgroundColor: 'action.disabledBackground',
+                  color: 'action.disabled',
+                },
+              }}
+              aria-label="Record audio"
             >
-              {isLoading ? 'Recording...' : 'Start Recording'}
-            </Button>
+              <MicIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+            </IconButton>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+              {isLoading ? 'Recording...' : 'Tap to record audio'}
+            </Typography>
+            {isLoading && <LinearProgress sx={{ mt: 2, width: '100%', maxWidth: 200 }} />}
           </Box>
         ) : (
           // Playback State
@@ -348,23 +339,18 @@ const AudioQuestionRenderer: React.FC<AudioQuestionRendererProps> = ({
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
+              <IconButton
                 onClick={handleRecord}
                 disabled={isLoading}
+                color="primary"
+                size="small"
+                aria-label="Re-record"
               >
-                Re-record
-              </Button>
-
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={handleDelete}
-              >
-                Delete
-              </Button>
+                <RefreshIcon />
+              </IconButton>
+              <IconButton onClick={handleDelete} color="error" size="small" aria-label="Delete">
+                <DeleteIcon />
+              </IconButton>
             </Box>
 
             {/* Development Info */}

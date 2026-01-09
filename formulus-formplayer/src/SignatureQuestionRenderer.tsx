@@ -68,12 +68,6 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
     }
   }, [fieldId, handleChange, path]);
 
-  // Handle canvas signature drawing
-  const handleCanvasSignature = useCallback(() => {
-    setShowCanvas(true);
-    setError(null);
-  }, []);
-
   // Canvas drawing functions
   const getCanvasPoint = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -314,29 +308,46 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
       )}
 
       {/* Action Buttons */}
-      {!showCanvas && (
-        <Box>
-          <Button
-            variant="contained"
-            startIcon={isCapturing ? <CircularProgress size={20} /> : <SignatureIcon />}
+      {!showCanvas && !hasData && (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: { xs: 4, sm: 5 },
+            px: 2,
+          }}
+        >
+          <IconButton
             onClick={handleNativeSignature}
             disabled={!enabled || isCapturing}
-            fullWidth
-            sx={{ mb: 1 }}
+            color="primary"
+            size="large"
+            sx={{
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&:disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              },
+            }}
+            aria-label="Capture signature"
           >
-            {isCapturing ? 'Capturing Signature...' : 'Capture Signature (Native)'}
-          </Button>
-
-          <Button
-            variant="outlined"
-            startIcon={<SignatureIcon />}
-            onClick={handleCanvasSignature}
-            disabled={!enabled}
-            fullWidth
-            size="small"
-          >
-            Draw Signature (Canvas)
-          </Button>
+            {isCapturing ? (
+              <CircularProgress size={24} sx={{ color: 'white' }} />
+            ) : (
+              <SignatureIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+            )}
+          </IconButton>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+            {isCapturing ? 'Capturing signature...' : 'Tap to capture signature'}
+          </Typography>
         </Box>
       )}
 
@@ -373,9 +384,26 @@ const SignatureQuestionRenderer: React.FC<ControlProps> = ({
                 File: {data.filename} | Size: {Math.round(data.metadata.size / 1024)}KB
               </Typography>
             </Box>
-            <IconButton onClick={handleDelete} disabled={!enabled} size="small" sx={{ ml: 1 }}>
-              <DeleteIcon />
-            </IconButton>
+            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', mt: 2 }}>
+              <IconButton
+                onClick={handleNativeSignature}
+                disabled={!enabled || isCapturing}
+                color="primary"
+                size="small"
+                aria-label="Re-capture signature"
+              >
+                <SignatureIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleDelete}
+                disabled={!enabled}
+                color="error"
+                size="small"
+                aria-label="Delete signature"
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Box>
           </Box>
         </Paper>
       )}

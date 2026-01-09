@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { rankWith, ControlProps, formatIs } from '@jsonforms/core';
 import { withJsonFormsControlProps } from '@jsonforms/react';
-import { Button, Typography, Box, Card, CardContent, Chip, Grid, Divider } from '@mui/material';
+import { Typography, Box, Card, CardContent, Chip, Grid, Divider, IconButton } from '@mui/material';
 import {
   Videocam as VideocamIcon,
   PlayArrow as PlayIcon,
@@ -190,24 +190,18 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
 
             {/* Video Controls */}
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-              <Button
-                variant="outlined"
-                startIcon={isPlaying ? <PauseIcon /> : <PlayIcon />}
+              <IconButton
                 onClick={handlePlayPause}
                 disabled={isDisabled}
+                color="primary"
                 size="small"
+                aria-label={isPlaying ? 'Pause' : 'Play'}
               >
-                {isPlaying ? 'Pause' : 'Play'}
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<StopIcon />}
-                onClick={handleStop}
-                disabled={isDisabled}
-                size="small"
-              >
-                Stop
-              </Button>
+                {isPlaying ? <PauseIcon /> : <PlayIcon />}
+              </IconButton>
+              <IconButton onClick={handleStop} disabled={isDisabled} size="small" aria-label="Stop">
+                <StopIcon />
+              </IconButton>
             </Box>
 
             <Grid container spacing={2}>
@@ -256,52 +250,63 @@ const VideoQuestionRenderer: React.FC<VideoQuestionRendererProps> = (props) => {
             </Grid>
 
             {/* Action Buttons */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
+              <IconButton
                 onClick={handleRecordVideo}
                 disabled={isDisabled}
+                color="primary"
                 size="small"
+                aria-label="Re-record"
               >
-                Re-record
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
+                <RefreshIcon />
+              </IconButton>
+              <IconButton
                 onClick={handleDeleteVideo}
                 disabled={isDisabled}
+                color="error"
                 size="small"
+                aria-label="Delete"
               >
-                Delete
-              </Button>
+                <DeleteIcon />
+              </IconButton>
             </Box>
           </CardContent>
         </Card>
       ) : (
-        <Box>
-          <Button
-            variant="contained"
-            startIcon={<VideocamIcon />}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: { xs: 4, sm: 5 },
+            px: 2,
+          }}
+        >
+          <IconButton
             onClick={handleRecordVideo}
             disabled={isDisabled}
-            fullWidth
+            color="primary"
+            size="large"
             sx={{
-              py: 1.5,
-              fontSize: '1rem',
-              textTransform: 'none',
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&:disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              },
             }}
+            aria-label="Record video"
           >
-            Record Video
-          </Button>
-
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ mt: 1, display: 'block', textAlign: 'center' }}
-          >
-            This will open your device's camera to record a video
+            <VideocamIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+          </IconButton>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+            Tap to record video
           </Typography>
         </Box>
       )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { withJsonFormsControlProps } from '@jsonforms/react';
 import { ControlProps, rankWith, schemaTypeIs, and, schemaMatches } from '@jsonforms/core';
-import { Button, Box, Typography, Card, CardMedia, CardContent, IconButton } from '@mui/material';
+import { Box, Typography, Card, CardMedia, CardContent, IconButton } from '@mui/material';
 import { PhotoCamera, Delete, Refresh } from '@mui/icons-material';
 import FormulusClient from './FormulusInterface';
 import { CameraResult } from './FormulusInterfaceDefinition';
@@ -210,7 +210,7 @@ const PhotoQuestionRenderer: React.FC<PhotoQuestionProps> = ({
       }
     >
       {currentPhotoData && currentPhotoData.filename && photoUrl ? (
-        <Card sx={{ maxWidth: 400 }}>
+        <Card sx={{ maxWidth: '100%' }}>
           <CardMedia
             component="img"
             height="200"
@@ -220,15 +220,16 @@ const PhotoQuestionRenderer: React.FC<PhotoQuestionProps> = ({
           />
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                File: {currentPhotoData.filename}
+              <Typography variant="body2" color="text.secondary" sx={{ flex: 1, mr: 1 }}>
+                {currentPhotoData.filename}
               </Typography>
-              <Box>
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
                 <IconButton
                   onClick={handleTakePhoto}
                   disabled={!enabled || isLoading}
                   color="primary"
-                  title="Retake photo"
+                  size="small"
+                  aria-label="Retake photo"
                 >
                   <Refresh />
                 </IconButton>
@@ -236,7 +237,8 @@ const PhotoQuestionRenderer: React.FC<PhotoQuestionProps> = ({
                   onClick={handleDeletePhoto}
                   disabled={!enabled}
                   color="error"
-                  title="Delete photo"
+                  size="small"
+                  aria-label="Delete photo"
                 >
                   <Delete />
                 </IconButton>
@@ -247,27 +249,39 @@ const PhotoQuestionRenderer: React.FC<PhotoQuestionProps> = ({
       ) : (
         <Box
           sx={{
-            border: '2px dashed',
-            borderColor: 'divider',
-            borderRadius: 2,
-            p: 3,
-            textAlign: 'center',
-            backgroundColor: 'grey.50',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: { xs: 4, sm: 5 },
+            px: 2,
           }}
         >
-          <PhotoCamera sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            {currentPhotoData?.filename ? 'Photo taken' : 'No photo taken yet'}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<PhotoCamera />}
+          <IconButton
             onClick={handleTakePhoto}
             disabled={!enabled || isLoading}
+            color="primary"
             size="large"
+            sx={{
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&:disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              },
+            }}
+            aria-label="Take photo"
           >
-            {isLoading ? 'Opening Camera...' : 'Take Photo'}
-          </Button>
+            <PhotoCamera sx={{ fontSize: { xs: 28, sm: 32 } }} />
+          </IconButton>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+            {isLoading ? 'Opening camera...' : 'Tap to capture photo'}
+          </Typography>
         </Box>
       )}
     </QuestionShell>

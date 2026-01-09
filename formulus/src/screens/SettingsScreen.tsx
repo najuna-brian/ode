@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -9,24 +9,25 @@ import {
   Image,
   ScrollView,
   Alert,
+  type AlertButton,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
-import {StackNavigationProp} from '@react-navigation/stack';
+import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import * as Keychain from 'react-native-keychain';
-import {login, getUserInfo, UserInfo} from '../api/synkronus/Auth';
+import {login} from '../api/synkronus/Auth';
 import {serverConfigService} from '../services/ServerConfigService';
 import QRScannerModal from '../components/QRScannerModal';
 import {QRSettingsService} from '../services/QRSettingsService';
-import {MainAppStackParamList} from '../types/NavigationTypes';
+import {MainTabParamList} from '../types/NavigationTypes';
 import {colors} from '../theme/colors';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {ToastService} from '../services/ToastService';
 import {serverSwitchService} from '../services/ServerSwitchService';
 import {syncService} from '../services/SyncService';
 
-type SettingsScreenNavigationProp = StackNavigationProp<
-  MainAppStackParamList,
+type SettingsScreenNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
   'Settings'
 >;
 
@@ -39,7 +40,6 @@ const SettingsScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [_loggedInUser, setLoggedInUser] = useState<UserInfo | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -92,11 +92,11 @@ const SettingsScreen = () => {
             ? `Unsynced observations: ${pendingObservations}\nUnsynced attachments: ${pendingAttachments}\n\nSync is recommended before switching.`
             : 'Switching servers will wipe all local data for the previous server.';
 
-          const buttons = hasPending
+          const buttons: AlertButton[] = hasPending
             ? [
                 {
                   text: 'Cancel',
-                  style: 'cancel',
+                  style: 'cancel' as const,
                   onPress: () => {
                     setServerUrl(initialServerUrl);
                     resolve(false);
@@ -104,7 +104,7 @@ const SettingsScreen = () => {
                 },
                 {
                   text: 'Proceed without syncing',
-                  style: 'destructive',
+                  style: 'destructive' as const,
                   onPress: () => {
                     (async () => {
                       try {
@@ -137,7 +137,7 @@ const SettingsScreen = () => {
             : [
                 {
                   text: 'Cancel',
-                  style: 'cancel',
+                  style: 'cancel' as const,
                   onPress: () => {
                     setServerUrl(initialServerUrl);
                     resolve(false);
@@ -145,7 +145,7 @@ const SettingsScreen = () => {
                 },
                 {
                   text: 'Yes, wipe & switch',
-                  style: 'destructive',
+                  style: 'destructive' as const,
                   onPress: () => {
                     (async () => {
                       try {
@@ -187,9 +187,6 @@ const SettingsScreen = () => {
         setUsername(credentials.username);
         setPassword(credentials.password);
       }
-
-      const userInfo = await getUserInfo();
-      setLoggedInUser(userInfo);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -197,23 +194,30 @@ const SettingsScreen = () => {
     }
   };
 
-  const handleLogin = async () => {
-    if (!serverUrl.trim() || !username.trim() || !password.trim()) {
+  const handleLogin = useCallback(async () => {
+    const trimmedUrl = serverUrl.trim();
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedUrl || !trimmedUsername || !trimmedPassword) {
       return;
     }
 
-    const serverReady = await handleServerSwitchIfNeeded(serverUrl);
+    if (isLoggingIn) {
+      return;
+    }
+
+    const serverReady = await handleServerSwitchIfNeeded(trimmedUrl);
     if (!serverReady) {
       return;
     }
 
     setIsLoggingIn(true);
     try {
-      await Keychain.setGenericPassword(username, password);
-      const userInfo = await login(username, password);
-      setLoggedInUser(userInfo);
+      await Keychain.setGenericPassword(trimmedUsername, trimmedPassword);
+      await login(trimmedUsername, trimmedPassword);
       ToastService.showShort('Successfully logged in!');
-      navigation.navigate('MainApp');
+      navigation.navigate('Home');
     } catch (error: any) {
       console.error('Login failed:', error);
       const errorMessage =
@@ -222,7 +226,14 @@ const SettingsScreen = () => {
     } finally {
       setIsLoggingIn(false);
     }
-  };
+  }, [
+    serverUrl,
+    username,
+    password,
+    isLoggingIn,
+    handleServerSwitchIfNeeded,
+    navigation,
+  ]);
 
   const handleQRResult = async (result: any) => {
     setShowQRScanner(false);
@@ -254,10 +265,9 @@ const SettingsScreen = () => {
             settings.password,
           );
           try {
-            const userInfo = await login(settings.username, settings.password);
-            setLoggedInUser(userInfo);
+            await login(settings.username, settings.password);
             ToastService.showShort('Successfully logged in!');
-            navigation.navigate('MainApp');
+            navigation.navigate('Home');
           } catch (error: any) {
             console.error('Auto-login failed:', error);
             const errorMessage =
@@ -278,6 +288,12 @@ const SettingsScreen = () => {
       ToastService.showLong('Failed to scan QR code. Please try again.');
     }
   };
+
+  const isButtonDisabled = useMemo(() => {
+    const isFieldsEmpty =
+      !serverUrl.trim() || !username.trim() || !password.trim();
+    return isFieldsEmpty || isLoggingIn;
+  }, [serverUrl, username, password, isLoggingIn]);
 
   if (isLoading) {
     return (
@@ -303,7 +319,9 @@ const SettingsScreen = () => {
 
       <ScrollView
         style={styles.card}
-        contentContainerStyle={styles.cardContent}>
+        contentContainerStyle={styles.cardContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         <Text style={styles.title}>
           Please enter the server you want to connect to.
         </Text>
@@ -358,18 +376,23 @@ const SettingsScreen = () => {
         <TouchableOpacity
           style={[
             styles.nextButton,
-            (!serverUrl.trim() || !username.trim() || !password.trim()) &&
-              styles.nextButtonDisabled,
+            isButtonDisabled && styles.nextButtonDisabled,
           ]}
           onPress={handleLogin}
-          disabled={
-            !serverUrl.trim() ||
-            !username.trim() ||
-            !password.trim() ||
-            isLoggingIn
-          }>
-          <Icon name="arrow-right" size={20} color={colors.neutral[500]} />
-          <Text style={styles.nextButtonText}>
+          disabled={isButtonDisabled}
+          activeOpacity={isButtonDisabled ? 1 : 0.7}>
+          <Icon
+            name="arrow-right"
+            size={20}
+            color={
+              isButtonDisabled ? colors.neutral[500] : colors.neutral.white
+            }
+          />
+          <Text
+            style={[
+              styles.nextButtonText,
+              isButtonDisabled && styles.nextButtonTextDisabled,
+            ]}>
             {isLoggingIn ? 'Logging in...' : 'Login'}
           </Text>
         </TouchableOpacity>
@@ -462,7 +485,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 56,
     borderRadius: 8,
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.brand.primary[500],
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
@@ -477,6 +500,9 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.neutral.white,
+  },
+  nextButtonTextDisabled: {
     color: colors.neutral[500],
   },
 });

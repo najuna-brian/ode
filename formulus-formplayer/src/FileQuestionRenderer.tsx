@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Button, Typography, Box, CircularProgress, Paper, IconButton, Chip } from '@mui/material';
+import { Typography, Box, CircularProgress, Paper, IconButton, Chip } from '@mui/material';
 import {
   AttachFile as FileIcon,
   Delete as DeleteIcon,
@@ -153,16 +153,46 @@ const FileQuestionRenderer: React.FC<ControlProps> = ({
     >
       {/* File Selection Button */}
       {!hasData && (
-        <Button
-          variant="contained"
-          startIcon={isSelecting ? <CircularProgress size={20} /> : <FileIcon />}
-          onClick={handleFileSelection}
-          disabled={!enabled || isSelecting}
-          fullWidth
-          sx={{ mb: 2 }}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: { xs: 4, sm: 5 },
+            px: 2,
+          }}
         >
-          {isSelecting ? 'Selecting File...' : 'Select File'}
-        </Button>
+          <IconButton
+            onClick={handleFileSelection}
+            disabled={!enabled || isSelecting}
+            color="primary"
+            size="large"
+            sx={{
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&:disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              },
+            }}
+            aria-label="Select file"
+          >
+            {isSelecting ? (
+              <CircularProgress size={24} sx={{ color: 'white' }} />
+            ) : (
+              <FileIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+            )}
+          </IconButton>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+            {isSelecting ? 'Selecting file...' : 'Tap to select file'}
+          </Typography>
+        </Box>
       )}
 
       {/* File Display */}
@@ -194,37 +224,28 @@ const FileQuestionRenderer: React.FC<ControlProps> = ({
                   </Box>
                 </Box>
               </Box>
-
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                <strong>URI:</strong> {data.uri}
-              </Typography>
-
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                <strong>MIME Type:</strong> {data.mimeType}
-              </Typography>
-
-              {data.metadata.originalPath && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  <strong>Original Path:</strong> {data.metadata.originalPath}
-                </Typography>
-              )}
-
-              {/* Replace File Button */}
-              <Button
-                variant="outlined"
-                startIcon={<FileIcon />}
-                onClick={handleFileSelection}
-                disabled={!enabled || isSelecting}
-                size="small"
-                sx={{ mt: 2 }}
-              >
-                Replace File
-              </Button>
             </Box>
 
-            <IconButton onClick={handleDelete} disabled={!enabled} size="small" sx={{ ml: 1 }}>
-              <DeleteIcon />
-            </IconButton>
+            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', mt: 2 }}>
+              <IconButton
+                onClick={handleFileSelection}
+                disabled={!enabled || isSelecting}
+                color="primary"
+                size="small"
+                aria-label="Replace file"
+              >
+                <FileIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleDelete}
+                disabled={!enabled}
+                color="error"
+                size="small"
+                aria-label="Delete file"
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Box>
           </Box>
         </Paper>
       )}
