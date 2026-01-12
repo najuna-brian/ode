@@ -1260,6 +1260,8 @@ components:
         - created_at
         - updated_at
         - deleted
+        - author
+        - device_id
       properties:
         observation_id:
           type: string
@@ -1315,6 +1317,12 @@ components:
               nullable: true
               minimum: 0
               description: Vertical accuracy in meters
+        author:
+          type: string
+          description: Author/creator of the observation
+        device_id:
+          type: string
+          description: Device ID that created the observation
 
 
     ProblemDetail:

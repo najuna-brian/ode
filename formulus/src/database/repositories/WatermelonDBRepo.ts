@@ -9,6 +9,8 @@ import {
 import {ObservationMapper} from '../../mappers/ObservationMapper';
 import {geolocationService} from '../../services/GeolocationService';
 import {ToastService} from '../../services/ToastService';
+import {clientIdService} from '../../services/ClientIdService';
+import {getUserInfo} from '../../api/synkronus/Auth';
 
 /**
  * WatermelonDB implementation of the LocalRepoInterface
@@ -59,6 +61,17 @@ export class WatermelonDBRepo implements LocalRepoInterface {
           ? input.data
           : JSON.stringify(input.data);
 
+      // Capture author and device id
+      let author: string = input.author ?? '';
+      try {
+        if (!author) {
+          const user = await getUserInfo();
+          author = user?.username ?? '';
+        }
+      } catch {}
+      const deviceId: string =
+        input.deviceId ?? (await clientIdService.getClientId());
+
       // Stringify geolocation for storage
       const stringifiedGeolocation = geolocation
         ? JSON.stringify(geolocation)
@@ -82,6 +95,8 @@ export class WatermelonDBRepo implements LocalRepoInterface {
           record.formVersion = input.formVersion || '1.0';
           record.data = stringifiedData;
           record.geolocation = stringifiedGeolocation;
+          record.author = author;
+          record.deviceId = deviceId;
           record.deleted = false; // New observations are never deleted
           // Don't set syncedAt - let it be null so the observation is marked as pending sync
         });
@@ -428,6 +443,13 @@ export class WatermelonDBRepo implements LocalRepoInterface {
                 ? change.data
                 : JSON.stringify(change.data);
             record.deleted = change.deleted ?? record.deleted;
+            // Set optional metadata if provided
+            if ((change as any).author !== undefined) {
+              (record as any).author = (change as any).author ?? '';
+            }
+            if ((change as any).deviceId !== undefined) {
+              (record as any).deviceId = (change as any).deviceId ?? '';
+            }
             record.syncedAt = new Date();
           });
         } else {
@@ -442,6 +464,8 @@ export class WatermelonDBRepo implements LocalRepoInterface {
               typeof change.data === 'string'
                 ? change.data
                 : JSON.stringify(change.data);
+            (record as any).author = (change as any).author ?? '';
+            (record as any).deviceId = (change as any).deviceId ?? '';
             record.deleted = change.deleted ?? false;
             record.syncedAt = new Date();
           });
@@ -584,6 +608,8 @@ export class WatermelonDBRepo implements LocalRepoInterface {
       syncedAt: model.syncedAt,
       deleted: model.deleted,
       geolocation,
+      author: (model as any).author ?? null,
+      deviceId: (model as any).deviceId ?? null,
     };
   }
 }

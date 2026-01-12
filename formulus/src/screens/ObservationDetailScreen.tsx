@@ -312,6 +312,26 @@ const ObservationDetailScreen: React.FC<ObservationDetailScreenProps> = ({
         )}
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ownership</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Author:</Text>
+            <Text style={styles.infoValue}>
+              {observation.author && observation.author.trim().length > 0
+                ? observation.author
+                : 'Unknown'}
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Device ID:</Text>
+            <Text style={[styles.infoValue, styles.monoText]}>
+              {observation.deviceId && observation.deviceId.trim().length > 0
+                ? observation.deviceId
+                : 'Unknown'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Form Data</Text>
           <View style={styles.dataContainer}>
             {Object.entries(data).map(([key, value]) =>

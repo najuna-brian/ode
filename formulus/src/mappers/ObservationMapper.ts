@@ -30,22 +30,27 @@ export class ObservationMapper {
       syncedAt: apiObs.synced_at ? new Date(apiObs.synced_at) : null,
       deleted: apiObs.deleted || false,
       geolocation: apiObs.geolocation || null,
+      author: apiObs.author,
+      deviceId: apiObs.device_id,
     };
   }
 
   // Domain -> API
   static toApi(domainObs: DomainObservation): ApiObservation {
-    return {
+    const payload: ApiObservation = {
       observation_id: domainObs.observationId,
       form_type: domainObs.formType,
       form_version: domainObs.formVersion,
       data: domainObs.data,
       created_at: domainObs.createdAt.toISOString(),
       updated_at: domainObs.updatedAt.toISOString(),
-      synced_at: domainObs.syncedAt?.toISOString(),
+      synced_at: domainObs.syncedAt?.toISOString() ?? null,
       deleted: domainObs.deleted,
-      geolocation: domainObs.geolocation,
+      geolocation: domainObs.geolocation ?? null,
+      author: domainObs.author ?? '',
+      device_id: domainObs.deviceId ?? '',
     };
+    return payload;
   }
 
   // Domain -> DB Model
@@ -65,6 +70,8 @@ export class ObservationMapper {
       createdAt: domainObs.createdAt,
       updatedAt: domainObs.updatedAt,
       syncedAt: domainObs.syncedAt || undefined,
+      author: domainObs.author,
+      deviceId: domainObs.deviceId,
     };
   }
 
@@ -90,6 +97,8 @@ export class ObservationMapper {
       syncedAt: model.syncedAt,
       deleted: model.deleted,
       geolocation,
+      author: model.author ?? '',
+      deviceId: model.deviceId ?? '',
     };
   }
 }

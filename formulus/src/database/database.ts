@@ -29,6 +29,20 @@ const migrations = schemaMigrations({
         },
       ],
     },
+    {
+      toVersion: 4,
+      steps: [
+        // Add author and device_id columns to observations table
+        {
+          type: 'add_columns',
+          table: 'observations',
+          columns: [
+            {name: 'author', type: 'string'},
+            {name: 'device_id', type: 'string'},
+          ],
+        },
+      ],
+    },
   ],
 });
 

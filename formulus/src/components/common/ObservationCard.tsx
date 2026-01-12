@@ -80,6 +80,17 @@ const ObservationCard: React.FC<ObservationCardProps> = ({
               </Text>
             </View>
           </View>
+          <Text style={styles.owner} numberOfLines={1}>
+            {`By ${
+              observation.author && observation.author.trim().length > 0
+                ? observation.author
+                : 'Unknown'
+            } • ${
+              observation.deviceId && observation.deviceId.trim().length > 0
+                ? observation.deviceId.slice(-8)
+                : 'no-device'
+            }`}
+          </Text>
         </View>
         <View style={styles.actions}>
           {onEdit && (
@@ -156,6 +167,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  owner: {
+    marginTop: 6,
+    fontSize: 12,
+    color: colors.neutral[500],
   },
   date: {
     fontSize: 12,

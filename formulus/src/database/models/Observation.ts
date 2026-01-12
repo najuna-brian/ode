@@ -22,6 +22,8 @@ export interface Observation {
   deleted: boolean;
   data: ObservationData;
   geolocation: ObservationGeolocation | null;
+  author: string;
+  deviceId: string;
 }
 
 /**
@@ -38,6 +40,8 @@ export interface NewObservationInput {
   formType: string;
   data: ObservationData;
   formVersion?: string; // Optional, defaults to "1.0"
+  author?: string | null;
+  deviceId?: string | null;
 }
 
 /**
