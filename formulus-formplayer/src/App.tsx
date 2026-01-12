@@ -1,8 +1,16 @@
-import React, { useCallback, useState, useEffect, useRef, createContext, useContext } from 'react';
+import React, {
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+  createContext,
+  useContext,
+  useMemo,
+} from 'react';
 import './App.css';
 import { JsonForms } from '@jsonforms/react';
 import { materialRenderers, materialCells } from '@jsonforms/material-renderers';
-import { JsonSchema7 } from '@jsonforms/core';
+import { JsonSchema7, JsonFormsRendererRegistryEntry } from '@jsonforms/core';
 import { Alert, Snackbar, CircularProgress, Box, Typography, ThemeProvider } from '@mui/material';
 import { theme } from './theme';
 import Ajv from 'ajv';
@@ -32,6 +40,7 @@ import { shellMaterialRenderers } from './material-wrappers';
 import ErrorBoundary from './ErrorBoundary';
 import { draftService } from './DraftService';
 import DraftSelector from './DraftSelector';
+import { loadExtensions } from './ExtensionsLoader';
 
 // Only import development dependencies in development mode
 let webViewMock: any = null;
@@ -205,6 +214,13 @@ function App() {
   const [formInitData, setFormInitData] = useState<FormInitData | null>(null);
   const [showDraftSelector, setShowDraftSelector] = useState(false);
   const [pendingFormInit, setPendingFormInit] = useState<FormInitData | null>(null);
+  const [extensionRenderers, setExtensionRenderers] = useState<JsonFormsRendererRegistryEntry[]>(
+    [],
+  );
+  // Store extension functions for potential future use (e.g., validation context injection)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [extensionFunctions, setExtensionFunctions] = useState<Map<string, Function>>(new Map());
+  const [extensionDefinitions, setExtensionDefinitions] = useState<Record<string, any>>({});
 
   // Reference to the FormulusClient instance and loading state
   const formulusClient = useRef<FormulusClient>(FormulusClient.getInstance());
@@ -212,11 +228,44 @@ function App() {
 
   // Separate function to handle actual form initialization
   const initializeForm = useCallback(
-    (initData: FormInitData) => {
+    async (initData: FormInitData) => {
       try {
-        const { formType: receivedFormType, params, savedData, formSchema, uiSchema } = initData;
+        const {
+          formType: receivedFormType,
+          params,
+          savedData,
+          formSchema,
+          uiSchema,
+          extensions,
+        } = initData;
 
         setFormInitData(initData);
+
+        // Load extensions if provided
+        if (extensions) {
+          try {
+            const extensionResult = await loadExtensions(extensions);
+            setExtensionRenderers(extensionResult.renderers);
+            setExtensionFunctions(extensionResult.functions);
+            setExtensionDefinitions(extensionResult.definitions);
+
+            // Log errors but don't fail form initialization
+            if (extensionResult.errors.length > 0) {
+              console.warn('Extension loading errors:', extensionResult.errors);
+            }
+          } catch (error) {
+            console.error('Failed to load extensions:', error);
+            // Continue without extensions - not fatal
+            setExtensionRenderers([]);
+            setExtensionFunctions(new Map());
+            setExtensionDefinitions({});
+          }
+        } else {
+          // Clear extensions if none provided
+          setExtensionRenderers([]);
+          setExtensionFunctions(new Map());
+          setExtensionDefinitions({});
+        }
 
         if (!formSchema) {
           console.warn('formSchema was not provided. Form rendering might fail or be incomplete.');
@@ -538,30 +587,43 @@ function App() {
     [formInitData],
   );
 
-  const ajv = new Ajv({
-    allErrors: true,
-    strict: false, // Allow custom keywords like x-formulus-validation
-  });
-  addErrors(ajv);
-  addFormats(ajv);
+  // Create AJV instance with extension definitions support
+  const ajv = useMemo(() => {
+    const instance = new Ajv({
+      allErrors: true,
+      strict: false, // Allow custom keywords like x-formulus-validation
+    });
+    addErrors(instance);
+    addFormats(instance);
 
-  // Add custom format validators
-  ajv.addFormat('photo', () => true); // Accept any value for photo format
-  ajv.addFormat('qrcode', () => true); // Accept any value for qrcode format
-  ajv.addFormat('signature', () => true); // Accept any value for signature format
-  ajv.addFormat('select_file', () => true); // Accept any value for file selection format
-  ajv.addFormat('audio', () => true); // Accept any value for audio format
-  ajv.addFormat('gps', () => true); // Accept any value for GPS format
-  ajv.addFormat('video', () => true); // Accept any value for video format
-  ajv.addFormat('adate', (data: any) => {
-    // Allow null, undefined, or empty string (for optional fields)
-    if (data === null || data === undefined || data === '') {
-      return true;
+    // Add custom format validators
+    instance.addFormat('photo', () => true); // Accept any value for photo format
+    instance.addFormat('qrcode', () => true); // Accept any value for qrcode format
+    instance.addFormat('signature', () => true); // Accept any value for signature format
+    instance.addFormat('select_file', () => true); // Accept any value for file selection format
+    instance.addFormat('audio', () => true); // Accept any value for audio format
+    instance.addFormat('gps', () => true); // Accept any value for GPS format
+    instance.addFormat('video', () => true); // Accept any value for video format
+    instance.addFormat('adate', (data: any) => {
+      // Allow null, undefined, or empty string (for optional fields)
+      if (data === null || data === undefined || data === '') {
+        return true;
+      }
+      // Validate YYYY-MM-DD format (may contain ?? for unknown parts)
+      const dateRegex = /^(\d{4}|\?\?\?\?)-(\d{2}|\?\?)-(\d{2}|\?\?)$/;
+      return typeof data === 'string' && dateRegex.test(data);
+    });
+
+    // Add extension definitions to AJV for $ref support
+    if (Object.keys(extensionDefinitions).length > 0) {
+      // Add each definition individually so $ref can reference them
+      for (const [key, definition] of Object.entries(extensionDefinitions)) {
+        instance.addSchema(definition, `#/definitions/${key}`);
+      }
     }
-    // Validate YYYY-MM-DD format (may contain ?? for unknown parts)
-    const dateRegex = /^(\d{4}|\?\?\?\?)-(\d{2}|\?\?)-(\d{2}|\?\?)$/;
-    return typeof data === 'string' && dateRegex.test(data);
-  });
+
+    return instance;
+  }, [extensionDefinitions]);
 
   // Show draft selector if we have pending form init and available drafts
   if (showDraftSelector && pendingFormInit) {
@@ -690,6 +752,7 @@ function App() {
                       ...shellMaterialRenderers,
                       ...materialRenderers,
                       ...customRenderers,
+                      ...extensionRenderers, // Extension renderers (highest priority)
                     ]}
                     cells={materialCells}
                     onChange={handleDataChange}

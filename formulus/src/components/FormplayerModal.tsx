@@ -29,6 +29,8 @@ import {FormCompletionResult} from '../webview/FormulusInterfaceDefinition';
 
 import {databaseService} from '../database';
 import {FormSpec} from '../services'; // FormService will be imported directly
+import {ExtensionService} from '../services/ExtensionService';
+import RNFS from 'react-native-fs';
 
 interface FormplayerModalProps {
   visible: boolean;
@@ -216,6 +218,60 @@ const FormplayerModal = forwardRef<FormplayerModalHandle, FormplayerModalProps>(
         ...params,
       };
 
+      // Load extensions for this form
+      let extensions: any = undefined;
+      try {
+        const customAppPath = RNFS.DocumentDirectoryPath + '/app';
+        const extensionService = ExtensionService.getInstance();
+        const mergedExtensions = await extensionService.getCustomAppExtensions(
+          customAppPath,
+          formType.id,
+        );
+
+        // Convert to formplayer format
+        if (
+          mergedExtensions.definitions ||
+          mergedExtensions.functions ||
+          mergedExtensions.renderers
+        ) {
+          extensions = {
+            definitions: mergedExtensions.definitions,
+            functions: Object.entries(mergedExtensions.functions).reduce(
+              (acc, [key, func]) => {
+                acc[key] = {
+                  name: func.name,
+                  module: func.module || '',
+                  export: func.export,
+                };
+                return acc;
+              },
+              {} as Record<string, any>,
+            ),
+            renderers: Object.entries(mergedExtensions.renderers).reduce(
+              (acc, [key, renderer]) => {
+                acc[key] = {
+                  name: renderer.name,
+                  format: renderer.format,
+                  module: renderer.module,
+                  tester: renderer.tester,
+                  renderer: renderer.renderer,
+                };
+                return acc;
+              },
+              {} as Record<string, any>,
+            ),
+            // Base path for loading modules (file:// URL for WebView)
+            basePath:
+              Platform.OS === 'android'
+                ? `file:///android_asset/app`
+                : `file://${customAppPath}`,
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to load extensions:', error);
+        // Continue without extensions - not a fatal error
+      }
+
       const formInitData = {
         formType: formType.id,
         observationId: observationId,
@@ -223,6 +279,7 @@ const FormplayerModal = forwardRef<FormplayerModalHandle, FormplayerModalProps>(
         savedData: existingObservationData || {},
         formSchema: formType.schema,
         uiSchema: formType.uiSchema,
+        extensions,
       };
 
       console.log('Initializing form with:', formInitData);
