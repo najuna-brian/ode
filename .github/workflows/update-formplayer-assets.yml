@@ -8,14 +8,14 @@ on:
     paths:
       - 'formulus-formplayer/**'
       - '.github/workflows/update-formplayer-assets.yml'
-    paths-ignore:
-      - 'formulus/android/app/src/main/assets/formplayer_dist/**'
+    #paths-ignore:
+    #  - 'formulus/android/app/src/main/assets/formplayer_dist/**'
   pull_request:
     paths:
       - 'formulus-formplayer/**'
       - '.github/workflows/update-formplayer-assets.yml'
-    paths-ignore:
-      - 'formulus/android/app/src/main/assets/formplayer_dist/**'
+    #paths-ignore:
+    #  - 'formulus/android/app/src/main/assets/formplayer_dist/**'
 
 env:
   NODE_VERSION: '20'
