@@ -8,8 +8,8 @@ on:
     paths:
       - 'formulus/**'
       - '.github/workflows/formulus-android.yml'
-    paths-ignore:
-      - 'formulus/android/app/src/main/assets/formplayer_dist/**'
+    #paths-ignore:
+    #  - 'formulus/android/app/src/main/assets/formplayer_dist/**'
   pull_request:
     paths:
       - 'formulus/**'
@@ -155,3 +155,4 @@ jobs:
             formulus/android/app/build/outputs/apk/**/**/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
