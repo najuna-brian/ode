@@ -1,5 +1,6 @@
 import {synkronusApi} from './index';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Keychain from 'react-native-keychain';
 
 export type UserRole = 'read-only' | 'read-write' | 'admin';
 
@@ -141,4 +142,63 @@ export const refreshToken = async () => {
   await AsyncStorage.setItem('@refreshToken', refreshTokenValue);
   await AsyncStorage.setItem('@tokenExpiresAt', expiresAt.toString());
   return true;
+};
+
+/**
+ * Attempts to automatically re-login using stored credentials from Keychain.
+ * This is used when a 401 error is encountered during sync operations.
+ * @returns Promise<UserInfo> if login succeeds, null if credentials are not available
+ * @throws Error if login fails
+ */
+export const autoLogin = async (): Promise<UserInfo | null> => {
+  try {
+    // Get stored credentials from Keychain
+    const credentials = await Keychain.getGenericPassword();
+    if (!credentials || !credentials.username || !credentials.password) {
+      console.warn('No stored credentials found for auto-login');
+      return null;
+    }
+
+    console.log('🔄 Attempting auto-login with stored credentials');
+    const userInfo = await login(credentials.username, credentials.password);
+    console.log('✅ Auto-login successful - token refreshed');
+    return userInfo;
+  } catch (error: any) {
+    console.error('Auto-login failed:', error);
+    throw new Error(
+      `Auto-login failed: ${
+        error?.message || 'Unknown error'
+      }. Please login manually.`,
+    );
+  }
+};
+
+/**
+ * Checks if an error is a 401 Unauthorized error.
+ * Handles various error formats from Axios, fetch, and other HTTP clients.
+ */
+export const isUnauthorizedError = (error: any): boolean => {
+  if (!error) return false;
+
+  // Axios errors: error.response.status
+  if (error.response?.status === 401) return true;
+
+  // Direct status properties
+  if (error.status === 401 || error.statusCode === 401) return true;
+
+  // ProblemDetail format (from OpenAPI spec)
+  if (error.body?.status === 401 || error.data?.status === 401) return true;
+
+  // Check error message for 401 or unauthorized
+  if (typeof error.message === 'string') {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('401') || msg.includes('unauthorized')) {
+      return true;
+    }
+  }
+
+  // Check error code
+  if (error.code === 'UNAUTHORIZED' || error.code === 401) return true;
+
+  return false;
 };

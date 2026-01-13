@@ -368,6 +368,9 @@ class SynkronusApi {
 
   public clearTokenCache(): void {
     this.fastGetToken_cachedToken = null;
+    // Clear API instance to force recreation with new token after auto-login
+    this.api = null;
+    this.config = null;
   }
 
   private async downloadRawFiles(

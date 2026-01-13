@@ -68,21 +68,57 @@ const SyncScreen = () => {
   }, []);
 
   const handleSync = useCallback(async () => {
-    if (syncState.isActive) return;
+    if (syncState.isActive) {
+      console.log('Sync already active, ignoring request');
+      return;
+    }
+
+    let syncError: string | undefined;
 
     try {
+      console.log('Starting sync...');
       startSync(true);
-      await syncService.syncObservations(true);
-      await updatePendingUploads();
-      await updatePendingObservations();
-      finishSync();
+
+      // Add timeout to prevent infinite hanging (30 minutes max)
+      const syncPromise = syncService.syncObservations(true);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Sync operation timed out after 30 minutes'));
+        }, 30 * 60 * 1000);
+      });
+
+      const finalVersion = await Promise.race([syncPromise, timeoutPromise]);
+      console.log('✅ Sync completed successfully, version:', finalVersion);
+
+      // Update UI state even if these fail
+      try {
+        await updatePendingUploads();
+      } catch (e) {
+        console.warn('Failed to update pending uploads:', e);
+      }
+
+      try {
+        await updatePendingObservations();
+      } catch (e) {
+        console.warn('Failed to update pending observations:', e);
+      }
+
       const syncTime = new Date().toISOString();
       setLastSync(syncTime);
-      await AsyncStorage.setItem('@lastSync', syncTime);
+      try {
+        await AsyncStorage.setItem('@lastSync', syncTime);
+      } catch (e) {
+        console.warn('Failed to save last sync time:', e);
+      }
     } catch (error) {
-      const errorMessage = (error as Error).message;
-      finishSync(errorMessage);
-      Alert.alert('Error', 'Failed to sync!\n' + errorMessage);
+      console.error('❌ Sync error in handleSync:', error);
+      syncError = (error as Error).message || 'Unknown error occurred';
+      Alert.alert('Error', 'Failed to sync!\n' + syncError);
+    } finally {
+      // Always call finishSync to clear loading state
+      console.log('Calling finishSync, error:', syncError);
+      finishSync(syncError);
+      console.log('✅ Sync finished, isActive should be false now');
     }
   }, [
     updatePendingUploads,

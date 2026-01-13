@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {SyncProgress} from '../contexts/SyncContext';
 import {notificationService} from './NotificationService';
 import {FormService} from './FormService';
+import {autoLogin, isUnauthorizedError} from '../api/synkronus/Auth';
 type SyncStatusCallback = (status: string) => void;
 type SyncProgressDetailCallback = (progress: SyncProgress) => void;
 
@@ -14,6 +15,7 @@ export class SyncService {
   private progressCallbacks: Set<SyncProgressDetailCallback> = new Set();
   private canCancel: boolean = false;
   private shouldCancel: boolean = false;
+  private autoLoginRetryCount: number = 0; // Track auto-login retries to prevent loops
 
   private constructor() {}
 
@@ -65,6 +67,89 @@ export class SyncService {
     return this.canCancel;
   }
 
+  /**
+   * Wraps an API call with automatic 401 error handling and retry with auto-login.
+   * If a 401 error is detected, attempts to auto-login using stored credentials,
+   * then retries the operation once.
+   * Prevents infinite retry loops by tracking retry attempts.
+   */
+  private async withAutoLoginRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string = 'operation',
+  ): Promise<T> {
+    try {
+      // Reset retry count on successful operation
+      this.autoLoginRetryCount = 0;
+      return await operation();
+    } catch (error: any) {
+      // Check if this is a 401 Unauthorized error
+      if (isUnauthorizedError(error)) {
+        // Prevent infinite retry loops
+        if (this.autoLoginRetryCount >= 1) {
+          console.error(
+            'Auto-login retry limit reached. Please login manually in Settings.',
+          );
+          throw new Error(
+            'Authentication failed after retry. Please login manually in Settings.',
+          );
+        }
+
+        this.autoLoginRetryCount++;
+        console.log(
+          `🚨 401 Unauthorized error detected during ${operationName}, attempting auto-login...`,
+        );
+        this.updateStatus('Session expired, re-authenticating...');
+
+        try {
+          // Attempt auto-login
+          const userInfo = await autoLogin();
+          if (userInfo) {
+            console.log(`Auto-login successful, retrying ${operationName}...`);
+            this.updateStatus(`Retrying ${operationName}...`);
+            // Clear API cache to force new token usage
+            synkronusApi.clearTokenCache();
+            console.log(
+              `🔄 API cache cleared, retrying ${operationName} with new token...`,
+            );
+            // Retry the operation once (protected by retry count check above)
+            try {
+              const result = await operation();
+              console.log(
+                `✅ ${operationName} succeeded after auto-login retry`,
+              );
+              // Reset retry count on successful retry
+              this.autoLoginRetryCount = 0;
+              return result;
+            } catch (retryError: any) {
+              // If retry also fails with 401, don't retry again
+              if (isUnauthorizedError(retryError)) {
+                throw new Error(
+                  'Authentication failed after auto-login. Please login manually in Settings.',
+                );
+              }
+              throw retryError;
+            }
+          } else {
+            throw new Error(
+              'No stored credentials found. Please login manually in Settings.',
+            );
+          }
+        } catch (autoLoginError: any) {
+          console.error('Auto-login failed:', autoLoginError);
+          // Reset retry count on failure
+          this.autoLoginRetryCount = 0;
+          throw new Error(
+            `Authentication failed: ${
+              autoLoginError.message || 'Please login manually in Settings.'
+            }`,
+          );
+        }
+      }
+      // If not a 401 error, re-throw the original error
+      throw error;
+    }
+  }
+
   public async syncObservations(
     includeAttachments: boolean = false,
   ): Promise<number> {
@@ -75,6 +160,7 @@ export class SyncService {
     this.isSyncing = true;
     this.canCancel = true;
     this.shouldCancel = false;
+    this.autoLoginRetryCount = 0; // Reset retry count for new sync operation
     this.updateStatus('Starting sync...');
 
     // Clear any stale notifications before starting new sync
@@ -155,8 +241,9 @@ export class SyncService {
         }
       }
 
-      const finalVersion = await synkronusApi.syncObservations(
-        includeAttachments,
+      const finalVersion = await this.withAutoLoginRetry(
+        () => synkronusApi.syncObservations(includeAttachments),
+        'sync observations',
       );
 
       this.updateProgress({
@@ -168,14 +255,32 @@ export class SyncService {
       await AsyncStorage.setItem('@last_seen_version', finalVersion.toString());
 
       this.updateStatus(`Sync completed @ data version ${finalVersion}`);
-      await notificationService.showSyncComplete(true);
+      console.log(
+        'Sync completed successfully, showing completion notification...',
+      );
 
+      // Don't let notification service block sync completion
+      notificationService
+        .showSyncComplete(true)
+        .then(() => console.log('Sync completion notification shown'))
+        .catch(error =>
+          console.warn('Failed to show sync completion notification:', error),
+        );
+
+      console.log('Returning final version:', finalVersion);
       return finalVersion;
     } catch (error: any) {
       console.error('Sync failed', error);
       const errorMessage = error.message || 'Unknown error occurred';
       this.updateStatus(`Sync failed: ${errorMessage}`);
-      await notificationService.showSyncComplete(false, errorMessage);
+
+      // Don't let notification service block error handling
+      notificationService
+        .showSyncComplete(false, errorMessage)
+        .catch(notifError =>
+          console.warn('Failed to show sync failure notification:', notifError),
+        );
+
       throw error;
     } finally {
       this.isSyncing = false;
@@ -187,7 +292,10 @@ export class SyncService {
 
   public async checkForUpdates(force: boolean = false): Promise<boolean> {
     try {
-      const manifest = await synkronusApi.getManifest();
+      const manifest = await this.withAutoLoginRetry(
+        () => synkronusApi.getManifest(),
+        'check for updates',
+      );
       const currentVersion = (await AsyncStorage.getItem('@appVersion')) || '0';
       const updateAvailable = force || manifest.version !== currentVersion;
 
@@ -208,11 +316,15 @@ export class SyncService {
     }
 
     this.isSyncing = true;
+    this.autoLoginRetryCount = 0; // Reset retry count for new bundle update
     this.updateStatus('Starting app bundle sync...');
 
     try {
       // Get manifest to know what version we're downloading
-      const manifest = await synkronusApi.getManifest();
+      const manifest = await this.withAutoLoginRetry(
+        () => synkronusApi.getManifest(),
+        'get manifest',
+      );
 
       await this.downloadAppBundle();
 
@@ -239,25 +351,38 @@ export class SyncService {
   private async downloadAppBundle(): Promise<void> {
     try {
       this.updateStatus('Fetching manifest...');
-      const manifest = await synkronusApi.getManifest();
+      const manifest = await this.withAutoLoginRetry(
+        () => synkronusApi.getManifest(),
+        'get manifest',
+      );
 
       // Clean out the existing app bundle
       await synkronusApi.removeAppBundleFiles();
 
       // Download form specs
       this.updateStatus('Downloading form specs...');
-      const formResults = await synkronusApi.downloadFormSpecs(
-        manifest,
-        RNFS.DocumentDirectoryPath,
-        progress => this.updateStatus(`Downloading form specs... ${progress}%`),
+      const formResults = await this.withAutoLoginRetry(
+        () =>
+          synkronusApi.downloadFormSpecs(
+            manifest,
+            RNFS.DocumentDirectoryPath,
+            progress =>
+              this.updateStatus(`Downloading form specs... ${progress}%`),
+          ),
+        'download form specs',
       );
 
       // Download app files
       this.updateStatus('Downloading app files...');
-      const appResults = await synkronusApi.downloadAppFiles(
-        manifest,
-        RNFS.DocumentDirectoryPath,
-        progress => this.updateStatus(`Downloading app files... ${progress}%`),
+      const appResults = await this.withAutoLoginRetry(
+        () =>
+          synkronusApi.downloadAppFiles(
+            manifest,
+            RNFS.DocumentDirectoryPath,
+            progress =>
+              this.updateStatus(`Downloading app files... ${progress}%`),
+          ),
+        'download app files',
       );
 
       const results = [...formResults, ...appResults];

@@ -214,6 +214,9 @@ const SettingsScreen = () => {
 
     setIsLoggingIn(true);
     try {
+      // Ensure server URL is saved before login (required by getApi())
+      await serverConfigService.saveServerUrl(trimmedUrl);
+
       await Keychain.setGenericPassword(trimmedUsername, trimmedPassword);
       await login(trimmedUsername, trimmedPassword);
       ToastService.showShort('Successfully logged in!');
@@ -260,6 +263,9 @@ const SettingsScreen = () => {
         setPassword(settings.password);
 
         if (settings.username && settings.password) {
+          // Ensure server URL is saved before login (required by getApi())
+          await serverConfigService.saveServerUrl(settings.serverUrl);
+
           await Keychain.setGenericPassword(
             settings.username,
             settings.password,
