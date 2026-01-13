@@ -1,0 +1,99 @@
+name: Update Formplayer Assets
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'formulus-formplayer/**'
+      - '.github/workflows/update-formplayer-assets.yml'
+    paths-ignore:
+      - 'formulus/android/app/src/main/assets/formplayer_dist/**'
+  pull_request:
+    paths:
+      - 'formulus-formplayer/**'
+      - '.github/workflows/update-formplayer-assets.yml'
+    paths-ignore:
+      - 'formulus/android/app/src/main/assets/formplayer_dist/**'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  update-assets:
+    name: Build Formplayer Assets (Validate on PR, Commit on Merge)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            formulus-formplayer/package-lock.json
+            packages/tokens/package-lock.json
+      
+      - name: Install and build @ode/tokens
+        working-directory: packages/tokens
+        run: |
+          npm install
+          npm run build
+      
+      - name: Install formplayer dependencies
+        working-directory: formulus-formplayer
+        run: npm ci
+      
+      - name: Build and bundle formplayer
+        working-directory: formulus-formplayer
+        run: npm run build:rn
+      
+      - name: Upload formplayer assets artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: formplayer-assets
+          path: formulus/android/app/src/main/assets/formplayer_dist
+          retention-days: 1
+      
+      - name: Validate assets built successfully (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ ! -d "formulus/android/app/src/main/assets/formplayer_dist" ] || [ -z "$(ls -A formulus/android/app/src/main/assets/formplayer_dist)" ]; then
+            echo "❌ Formplayer assets were not built successfully"
+            exit 1
+          else
+            echo "✅ Formplayer assets built successfully"
+            echo "Assets will be committed automatically when PR is merged"
+          fi
+      
+      - name: Check for asset changes
+        if: github.event_name == 'push'
+        id: check-changes
+        run: |
+          git add formulus/android/app/src/main/assets/formplayer_dist
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes to formplayer assets"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Formplayer assets have changed"
+          fi
+      
+      - name: Commit and push assets
+        if: steps.check-changes.outputs.changed == 'true' && github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add formulus/android/app/src/main/assets/formplayer_dist
+          git commit -m "chore: update formplayer assets from formulus-formplayer [skip ci]"
+          git push
+

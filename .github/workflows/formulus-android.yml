@@ -8,10 +8,19 @@ on:
     paths:
       - 'formulus/**'
       - '.github/workflows/formulus-android.yml'
+    paths-ignore:
+      - 'formulus/android/app/src/main/assets/formplayer_dist/**'
   pull_request:
     paths:
       - 'formulus/**'
       - '.github/workflows/formulus-android.yml'
+  workflow_run:
+    workflows: ["Update Formplayer Assets"]
+    types:
+      - completed
+    branches:
+      - main
+      - dev
   release:
     types: [published]
 
@@ -28,6 +37,31 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Download formplayer assets artifact (from update workflow)
+        id: download-assets
+        if: github.event_name == 'workflow_run'
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          name: formplayer-assets
+          path: formulus/android/app/src/main/assets/formplayer_dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: update-formplayer-assets.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          allow_no_artifact: true
+      
+      - name: Check if assets exist
+        id: check-assets
+        run: |
+          if [ -d "formulus/android/app/src/main/assets/formplayer_dist" ] && [ -n "$(ls -A formulus/android/app/src/main/assets/formplayer_dist 2>/dev/null)" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Formplayer assets found (from artifact or repo)"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Formplayer assets not found, will build them"
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -37,10 +71,30 @@ jobs:
           cache-dependency-path: |
             formulus/package-lock.json
             formulus/package.json
+            formulus-formplayer/package-lock.json
+            formulus-formplayer/package.json
+            packages/tokens/package-lock.json
+            packages/tokens/package.json
 
-      - name: Install npm dependencies
+      - name: Install npm dependencies (formulus)
         working-directory: formulus
         run: npm ci
+
+      - name: Install and build @ode/tokens
+        working-directory: packages/tokens
+        run: |
+          npm install
+          npm run build
+
+      - name: Install npm dependencies (formplayer)
+        if: steps.check-assets.outputs.exists != 'true'
+        working-directory: formulus-formplayer
+        run: npm ci
+
+      - name: Build and bundle formplayer
+        if: steps.check-assets.outputs.exists != 'true'
+        working-directory: formulus-formplayer
+        run: npm run build:rn
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -81,7 +135,7 @@ jobs:
         working-directory: formulus/android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Build release APK (main/develop/release)
+      - name: Build release APK (main/dev/release)
         if: github.event_name != 'pull_request'
         working-directory: formulus/android
         run: ./gradlew assembleRelease --no-daemon
