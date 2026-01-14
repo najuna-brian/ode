@@ -184,6 +184,51 @@ func TestValidateBundle(t *testing.T) {
 			},
 			wantErr: false, // Should pass because schema.json files outside forms/ are ignored (app/schema.json should not be processed)
 		},
+		{
+			name: "v1 format extension with renderer/tester objects (PR #18 format)",
+			files: map[string]string{
+				"app/index.html": "<html></html>",
+				"forms/user/schema.json": `{"type": "object", "properties": {"customField": {"type": "string", "format": "CustomText"}}}`,
+				"forms/user/ui.json": `{"type": "Control", "scope": "#/properties/customField", "options": {"format": "CustomText"}}`,
+				"forms/ext.json": `{
+					"version": "1",
+					"renderers": {
+						"CustomText": {
+							"renderer": {
+								"path": "/extensions/renderers/CustomTextRenderer.jsx",
+								"export": "default"
+							},
+							"tester": {
+								"path": "/extensions/testers/customTextTester.js",
+								"export": "customTextTester"
+							}
+						}
+					}
+				}`,
+				"app/extensions/renderers/CustomTextRenderer.jsx": "export default function CustomTextRenderer() {}",
+				"app/extensions/testers/customTextTester.js": "export function customTextTester() {}",
+			},
+			wantErr: false,
+		},
+		{
+			name: "legacy format extension (PR #226 format)",
+			files: map[string]string{
+				"app/index.html": "<html></html>",
+				"forms/user/schema.json": `{"type": "object"}`,
+				"forms/user/ui.json": "{}",
+				"forms/ext.json": `{
+					"renderers": {
+						"customRenderer": {
+							"name": "CustomRenderer",
+							"format": "custom-format",
+							"module": "renderers/CustomRenderer.tsx"
+						}
+					}
+				}`,
+				"app/renderers/CustomRenderer.tsx": "export default function CustomRenderer() {}",
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

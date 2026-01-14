@@ -55,8 +55,12 @@ func ValidateBundle(bundlePath string) error {
 			hasAppDir = true
 		}
 
-		// Track form directories
+		// Track form directories (exclude ext.json files)
 		if strings.HasPrefix(file.Name, "forms/") && !strings.HasSuffix(file.Name, "/") {
+			// Skip ext.json files - they're not form directories
+			if strings.HasSuffix(file.Name, "/ext.json") {
+				continue
+			}
 			formParts := strings.Split(file.Name, "/")
 			if len(formParts) >= 2 {
 				formDirs[formParts[1]] = struct{}{}
@@ -76,6 +80,10 @@ func ValidateBundle(bundlePath string) error {
 	for _, file := range zipFile.File {
 		// Validate form structure
 		if strings.HasPrefix(file.Name, "forms/") {
+			// Skip ext.json files - they're validated separately in validateExtensions
+			if strings.HasSuffix(file.Name, "/ext.json") {
+				continue
+			}
 			if err := validateFormFile(file); err != nil {
 				return err
 			}
@@ -188,13 +196,17 @@ func validateFormRendererReferences(zipReader *zip.Reader) error {
 
 			// Extract renderer formats
 			if ext.Renderers != nil {
-				for _, rendererData := range ext.Renderers {
+				for key, rendererData := range ext.Renderers {
 					rendererBytes, _ := json.Marshal(rendererData)
 					var renderer ExtensionRenderer
 					if err := json.Unmarshal(rendererBytes, &renderer); err == nil {
+						// In v1 format, the key is the format name
+						// In legacy format, use Format field
+						format := key
 						if renderer.Format != "" {
-							extensionRenderers[renderer.Format] = true
+							format = renderer.Format
 						}
+						extensionRenderers[format] = true
 					}
 				}
 			}
@@ -314,18 +326,18 @@ func checkSchemaRendererReferences(data interface{}, availableRenderers map[stri
 		if format, ok := v["format"].(string); ok {
 			// Format-based renderers must be in extension renderers or built-in
 			if !extensionRenderers[format] && !isBuiltInRenderer(format) {
-				// Check if it's a known format
-				knownFormats := []string{"date", "date-time", "time", "photo", "qrcode", "signature", "select_file", "audio", "gps", "video", "adate"}
-				isKnownFormat := false
-				for _, known := range knownFormats {
-					if format == known {
-						isKnownFormat = true
-						break
-					}
+			// Check if it's a known format
+			knownFormats := []string{"date", "date-time", "time", "photo", "qrcode", "signature", "select_file", "audio", "gps", "video", "adate", "html"}
+			isKnownFormat := false
+			for _, known := range knownFormats {
+				if format == known {
+					isKnownFormat = true
+					break
 				}
-				if !isKnownFormat {
-					return fmt.Errorf("schema property references renderer with format '%s' but no extension renderer is defined for this format", format)
-				}
+			}
+			if !isKnownFormat {
+				return fmt.Errorf("schema property references renderer with format '%s' but no extension renderer is defined for this format", format)
+			}
 			}
 		}
 
@@ -367,18 +379,29 @@ func validateJSONFile(file *zip.File) error {
 
 // ExtensionDefinition represents the structure of an ext.json file
 type ExtensionDefinition struct {
-	Definitions map[string]interface{} `json:"definitions,omitempty"`
+	Version     string                 `json:"version,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Schemas     map[string]interface{} `json:"schemas,omitempty"`
+	Definitions map[string]interface{} `json:"definitions,omitempty"` // Legacy support
 	Functions   map[string]interface{} `json:"functions,omitempty"`
 	Renderers   map[string]interface{} `json:"renderers,omitempty"`
 }
 
-// ExtensionRenderer represents a renderer definition in ext.json
+// ExtensionModuleReference represents a module reference with path and export
+type ExtensionModuleReference struct {
+	Path   string `json:"path"`
+	Export string `json:"export"`
+}
+
+// ExtensionRenderer represents a renderer definition in ext.json (v1 format)
+// In v1 format, the renderer key (e.g., "CustomText") is the format/name
 type ExtensionRenderer struct {
-	Name   string `json:"name"`
-	Format string `json:"format"`
-	Module string `json:"module"`
-	Tester string `json:"tester,omitempty"`
-	Renderer string `json:"renderer,omitempty"`
+	Renderer *ExtensionModuleReference `json:"renderer,omitempty"`
+	Tester   *ExtensionModuleReference `json:"tester,omitempty"`
+	// Legacy fields for backward compatibility
+	Name   string `json:"name,omitempty"`
+	Format string `json:"format,omitempty"`
+	Module string `json:"module,omitempty"`
 }
 
 // validateExtensions validates extension files (ext.json) in the bundle
@@ -425,21 +448,52 @@ func validateExtensions(zipReader *zip.Reader) error {
 						return fmt.Errorf("%w: %s: invalid renderer %s: %v", ErrInvalidExtension, file.Name, key, err)
 					}
 
-					// Validate required fields
-					if renderer.Name == "" {
-						return fmt.Errorf("%w: %s: renderer %s missing 'name' field", ErrInvalidExtensionRenderer, file.Name, key)
-					}
-					if renderer.Format == "" {
-						return fmt.Errorf("%w: %s: renderer %s missing 'format' field", ErrInvalidExtensionRenderer, file.Name, key)
-					}
-					if renderer.Module == "" {
-						return fmt.Errorf("%w: %s: renderer %s missing 'module' field", ErrInvalidExtensionRenderer, file.Name, key)
+					// Determine format/name - use key as format for v1 format, or use Format field for legacy
+					format := key
+					if renderer.Format != "" {
+						format = renderer.Format
 					}
 
-					// Store renderer for later validation
-					extensionRenderers[renderer.Format] = renderer
-					// Track module path (relative to forms/ or app/)
-					extensionModules[renderer.Module] = true
+					// Validate v1 format (new format with renderer/tester objects)
+					if renderer.Renderer != nil {
+						// New v1 format: renderer is an object with path and export
+						if renderer.Renderer.Path == "" {
+							return fmt.Errorf("%w: %s: renderer %s missing 'renderer.path' field", ErrInvalidExtensionRenderer, file.Name, key)
+						}
+						if renderer.Renderer.Export == "" {
+							return fmt.Errorf("%w: %s: renderer %s missing 'renderer.export' field", ErrInvalidExtensionRenderer, file.Name, key)
+						}
+						// Track renderer module path
+						extensionModules[renderer.Renderer.Path] = true
+
+						// Validate tester if present
+						if renderer.Tester != nil {
+							if renderer.Tester.Path == "" {
+								return fmt.Errorf("%w: %s: renderer %s missing 'tester.path' field", ErrInvalidExtensionRenderer, file.Name, key)
+							}
+							if renderer.Tester.Export == "" {
+								return fmt.Errorf("%w: %s: renderer %s missing 'tester.export' field", ErrInvalidExtensionRenderer, file.Name, key)
+							}
+							// Track tester module path
+							extensionModules[renderer.Tester.Path] = true
+						}
+					} else if renderer.Module != "" {
+						// Legacy format: validate required fields (as per PR #226)
+						if renderer.Name == "" {
+							return fmt.Errorf("%w: %s: renderer %s missing 'name' field", ErrInvalidExtensionRenderer, file.Name, key)
+						}
+						if renderer.Format == "" {
+							return fmt.Errorf("%w: %s: renderer %s missing 'format' field", ErrInvalidExtensionRenderer, file.Name, key)
+						}
+						// Module already checked in the condition
+						extensionModules[renderer.Module] = true
+					} else {
+						// Neither format present
+						return fmt.Errorf("%w: %s: renderer %s must have either 'renderer' object (v1 format) or 'module' string (legacy format)", ErrInvalidExtensionRenderer, file.Name, key)
+					}
+
+					// Store renderer for later validation (use key as format)
+					extensionRenderers[format] = renderer
 				}
 			}
 
@@ -451,12 +505,20 @@ func validateExtensions(zipReader *zip.Reader) error {
 						return fmt.Errorf("%w: %s: function %s must be an object", ErrInvalidExtension, file.Name, key)
 					}
 
-					if name, ok := funcMap["name"].(string); !ok || name == "" {
-						return fmt.Errorf("%w: %s: function %s missing or invalid 'name' field", ErrInvalidExtension, file.Name, key)
-					}
-
-					if module, ok := funcMap["module"].(string); ok && module != "" {
-						extensionModules[module] = true
+					// Support v1 format (path/export) and legacy format (name/module)
+					if path, ok := funcMap["path"].(string); ok && path != "" {
+						// New v1 format: path and export
+						if export, ok := funcMap["export"].(string); !ok || export == "" {
+							return fmt.Errorf("%w: %s: function %s missing or invalid 'export' field", ErrInvalidExtension, file.Name, key)
+						}
+						extensionModules[path] = true
+					} else if name, ok := funcMap["name"].(string); ok && name != "" {
+						// Legacy format: name and module
+						if module, ok := funcMap["module"].(string); ok && module != "" {
+							extensionModules[module] = true
+						}
+					} else {
+						return fmt.Errorf("%w: %s: function %s must have either 'path' and 'export' (v1 format) or 'name' (legacy format)", ErrInvalidExtension, file.Name, key)
 					}
 				}
 			}
@@ -468,12 +530,18 @@ func validateExtensions(zipReader *zip.Reader) error {
 		// Check if module exists in bundle
 		// Modules can be in forms/ or app/ directories
 		moduleFound := false
+		
+		// Normalize path - remove leading "/" if present (v1 format uses absolute paths)
+		normalizedPath := strings.TrimPrefix(modulePath, "/")
+		
 		for _, file := range zipReader.File {
 			// Check various possible paths
 			if file.Name == modulePath ||
-				file.Name == "forms/"+modulePath ||
-				file.Name == "app/"+modulePath ||
-				strings.HasSuffix(file.Name, "/"+modulePath) {
+				file.Name == normalizedPath ||
+				file.Name == "forms/"+normalizedPath ||
+				file.Name == "app/"+normalizedPath ||
+				strings.HasSuffix(file.Name, "/"+normalizedPath) ||
+				strings.HasSuffix(file.Name, modulePath) {
 				moduleFound = true
 				break
 			}
@@ -499,18 +567,18 @@ func checkUISchemaRendererReferences(data interface{}, availableRenderers map[st
 		if format, ok := v["format"].(string); ok {
 			// Format-based renderers must be in extension renderers or built-in
 			if !extensionRenderers[format] && !isBuiltInRenderer(format) {
-				// Check if it's a known format (date, date-time, time are built-in)
-				knownFormats := []string{"date", "date-time", "time", "photo", "qrcode", "signature", "select_file", "audio", "gps", "video", "adate"}
-				isKnownFormat := false
-				for _, known := range knownFormats {
-					if format == known {
-						isKnownFormat = true
-						break
-					}
+			// Check if it's a known format (date, date-time, time are built-in)
+			knownFormats := []string{"date", "date-time", "time", "photo", "qrcode", "signature", "select_file", "audio", "gps", "video", "adate", "html"}
+			isKnownFormat := false
+			for _, known := range knownFormats {
+				if format == known {
+					isKnownFormat = true
+					break
 				}
-				if !isKnownFormat {
-					return fmt.Errorf("UI schema references renderer with format '%s' but no extension renderer is defined for this format", format)
-				}
+			}
+			if !isKnownFormat {
+				return fmt.Errorf("UI schema references renderer with format '%s' but no extension renderer is defined for this format", format)
+			}
 			}
 		}
 
