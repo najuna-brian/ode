@@ -1,6 +1,6 @@
 // Auto-generated from FormulusInterfaceDefinition.ts
 // Do not edit directly - this file will be overwritten
-// Last generated: 2025-11-23T17:39:01.171Z
+// Last generated: 2026-01-23T01:14:57.364Z
 
 (function () {
   // Enhanced API availability detection and recovery
@@ -1215,6 +1215,66 @@
         );
       });
     },
+
+    // getCurrentUser:  => Promise<{ username: string; displayName?: string; }>
+    getCurrentUser: function () {
+      return new Promise((resolve, reject) => {
+        const messageId =
+          'msg_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+
+        // Add response handler for methods that return values
+
+        const callback = event => {
+          try {
+            let data;
+            if (typeof event.data === 'string') {
+              data = JSON.parse(event.data);
+            } else if (typeof event.data === 'object' && event.data !== null) {
+              data = event.data; // Already an object
+            } else {
+              // console.warn('getCurrentUser callback: Received response with unexpected data type:', typeof event.data, event.data);
+              window.removeEventListener('message', callback); // Clean up listener
+              reject(
+                new Error(
+                  'getCurrentUser callback: Received response with unexpected data type. Raw: ' +
+                    String(event.data),
+                ),
+              );
+              return;
+            }
+            if (
+              data.type === 'getCurrentUser_response' &&
+              data.messageId === messageId
+            ) {
+              window.removeEventListener('message', callback);
+              if (data.error) {
+                reject(new Error(data.error));
+              } else {
+                resolve(data.result);
+              }
+            }
+          } catch (e) {
+            console.error(
+              "'getCurrentUser' callback: Error processing response:",
+              e,
+              'Raw event.data:',
+              event.data,
+            );
+            window.removeEventListener('message', callback); // Ensure listener is removed on error too
+            reject(e);
+          }
+        };
+        window.addEventListener('message', callback);
+
+        // Send the message to React Native
+        globalThis.ReactNativeWebView.postMessage(
+          JSON.stringify({
+            type: 'getCurrentUser',
+            messageId,
+          }),
+        );
+      });
+    },
   };
 
   // Register the callback handler with the window object
@@ -1245,8 +1305,6 @@
       }),
     );
   }
-
-  // Add TypeScript type information
 
   // Make the API available globally in browser environments
   if (typeof window !== 'undefined') {
