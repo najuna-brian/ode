@@ -61,6 +61,9 @@ jobs:
           tags: |
             # For main branch: latest + version tag (manual dispatch) or release tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            # For dev branch: tag as both dev and latest (for demo server auto-updates)
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev' }}
             # When triggered via manual dispatch with a version input
             type=semver,pattern=v{{version}},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }},value=${{ github.event.inputs.version }}
             type=semver,pattern=v{{major}}.{{minor}},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }},value=${{ github.event.inputs.version }}
@@ -68,7 +71,7 @@ jobs:
             type=semver,pattern=v{{version}},enable=${{ github.event_name == 'release' }},value=${{ github.event.release.tag_name }}
             type=semver,pattern=v{{major}}.{{minor}},enable=${{ github.event_name == 'release' }},value=${{ github.event.release.tag_name }}
             # For other branches: branch name (pre-release)
-            type=ref,event=branch,enable=${{ github.event_name != 'release' && github.ref != 'refs/heads/main' }}
+            type=ref,event=branch,enable=${{ github.event_name != 'release' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
             # For PRs: pr-number
             type=ref,event=pr
             # SHA for traceability (only for non-release events)
