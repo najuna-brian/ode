@@ -5,7 +5,7 @@
  * that's available in the WebView context as `globalThis.formulus`.
  *
  * This file is auto-generated from FormulusInterfaceDefinition.ts
- * Last generated: 2025-11-23T17:39:02.391Z
+ * Last generated: 2026-01-23T01:15:01.676Z
  *
  * @example
  * // In your JavaScript file:
@@ -177,6 +177,13 @@ const FormulusAPI = {
    * @returns {Promise<void>}
    */
   runLocalModel: function (fieldId, modelId, input) {},
+
+  /**
+   * Get information about the currently authenticated user
+   * /
+   * @returns {Promise<{username: string, displayName?: string}
+   */
+  getCurrentUser: function () {},
 };
 
 // Make the API available globally in browser environments
