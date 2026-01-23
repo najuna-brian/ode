@@ -61,7 +61,8 @@ jobs:
           tags: |
             # For main branch: latest + version tag (manual dispatch) or release tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # For dev branch: also tag as latest (for demo server auto-updates)
+            # For dev branch: tag as both dev and latest (for demo server auto-updates)
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev' }}
             # When triggered via manual dispatch with a version input
             type=semver,pattern=v{{version}},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }},value=${{ github.event.inputs.version }}
